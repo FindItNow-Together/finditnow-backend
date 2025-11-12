@@ -1,0 +1,1 @@
+This repository is the part of Full stack development project and encapsulates the backend business logic of the web application
