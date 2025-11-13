@@ -16,6 +16,8 @@ import com.finditnow.redis.RedisStore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.undertow.server.HttpServerExchange;
+import io.undertow.server.handlers.Cookie;
+import io.undertow.util.Headers;
 
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
@@ -89,7 +91,7 @@ public class UserService {
 
         Map<String, String> resp = new HashMap<>();
         resp.put("access_token", accessToken);
-        resp.put("refresh_token", refreshToken);
+        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + refreshToken + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
@@ -140,22 +142,25 @@ public class UserService {
 
     // refresh access token flow
     public void refresh(HttpServerExchange exchange) throws Exception {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> req = mapper.readValue(body, Map.class);
-        String refreshToken = req.get("refresh_token");
-        if (refreshToken == null) {
+        Cookie refreshCookie = exchange.getRequestCookie("refresh_token");
+
+        if (refreshCookie == null) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_refresh_token\"}");
             return;
         }
 
+        String refreshToken = refreshCookie.getValue();
+
         // lookup redis
         Map<String, String> info = redis.getRefreshToken(refreshToken);
+
         if (info == null) {
             exchange.setStatusCode(401);
             exchange.getResponseSender().send("{\"error\":\"invalid_refresh\"}");
             return;
         }
+        
         String userId = info.get("userId");
         String profile = info.get("profile");
 

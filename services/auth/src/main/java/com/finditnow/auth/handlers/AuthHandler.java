@@ -30,7 +30,7 @@ public class AuthHandler {
             // Track request start time early
             long startTime = System.nanoTime();
             exchange.putAttachment(REQUEST_START_TIME_KEY, startTime);
-            
+
             exchange.dispatch(() -> {
                 try {
                     route(exchange);
@@ -40,8 +40,8 @@ public class AuthHandler {
                     if (start != null) {
                         executionTimeMs = (System.nanoTime() - start) / 1_000_000;
                     }
-                    logger.error("Exception handling request {} {} - {}ms", 
-                        exchange.getRequestMethod(), exchange.getRequestPath(), executionTimeMs, e);
+                    logger.error("Exception handling request {} {} - {}ms",
+                            exchange.getRequestMethod(), exchange.getRequestPath(), executionTimeMs, e);
                     exchange.setStatusCode(500);
                     exchange.getResponseSender().send("{\"error\":\"internal_error\"}");
                 }
@@ -51,11 +51,11 @@ public class AuthHandler {
 
         String method = exchange.getRequestMethod().toString();
         String path = exchange.getRequestPath();
-        
+
         // Track request start time
         long startTime = System.nanoTime();
         exchange.putAttachment(REQUEST_START_TIME_KEY, startTime);
-        
+
         // Log incoming request
         logger.info("Incoming request: {} {}", method, path);
 
@@ -70,7 +70,7 @@ public class AuthHandler {
         String route = exchange.getRequestPath();
         exchange.startBlocking();
 
-        if(!routeMap.containsKey(route)){
+        if (!routeMap.containsKey(route)) {
             exchange.setStatusCode(404);
             exchange.getResponseSender().send("{\"error\":\"invalid request\"}");
             logResponse(exchange);
@@ -78,7 +78,8 @@ public class AuthHandler {
         }
 
         String expectedMethod = routeMap.get(route);
-        if(!expectedMethod.equalsIgnoreCase(exchange.getRequestMethod().toString())){
+        
+        if (!expectedMethod.equalsIgnoreCase(exchange.getRequestMethod().toString())) {
             exchange.setStatusCode(405);
             exchange.getResponseSender().send("{\"error\":\"invalid request\"}");
             logResponse(exchange);
@@ -88,49 +89,44 @@ public class AuthHandler {
         switch (route) {
             case "/signin":
                 userService.signIn(exchange);
-                logResponse(exchange);
                 break;
             case "/signup":
                 userService.signUp(exchange);
-                logResponse(exchange);
                 break;
             case "/oauth/google/signin":
                 oauthService.handleGoogle(exchange);
-                logResponse(exchange);
                 break;
             case "/refresh":
                 userService.refresh(exchange);
-                logResponse(exchange);
                 break;
             case "/logout":
                 userService.logout(exchange);
-                logResponse(exchange);
                 break;
             case "/health":
                 exchange.setStatusCode(200);
                 exchange.getResponseSender().send("{\"status\":\"ok\"}");
-                logResponse(exchange);
                 break;
             default:
                 exchange.setStatusCode(404);
                 exchange.getResponseSender().send("{\"error\":\"invalid request path\"}");
-                logger.warn("Request to unknown path: {} {}", method, path);
                 break;
         }
+
+        logResponse(exchange);
     }
 
     private void logResponse(HttpServerExchange exchange) {
         int statusCode = exchange.getStatusCode();
         String method = exchange.getRequestMethod().toString();
         String path = exchange.getRequestPath();
-        
+
         // Calculate execution time
         Long startTime = exchange.getAttachment(REQUEST_START_TIME_KEY);
         long executionTimeMs = 0;
         if (startTime != null) {
             executionTimeMs = (System.nanoTime() - startTime) / 1_000_000; // Convert nanoseconds to milliseconds
         }
-        
+
         if (statusCode >= 200 && statusCode < 300) {
             logger.info("Response: {} {} {} (SUCCESS) - {}ms", method, path, statusCode, executionTimeMs);
         } else if (statusCode >= 400 && statusCode < 500) {
@@ -142,4 +138,3 @@ public class AuthHandler {
         }
     }
 }
-
