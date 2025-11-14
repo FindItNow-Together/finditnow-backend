@@ -12,6 +12,7 @@ dependencies {
     implementation(project(":libs:database"))
     implementation(project(":libs:redis"))
     implementation(project(":libs:jwt"))
+    implementation(project(":libs:mail"))
 
     // HTTP Server
     implementation("io.undertow:undertow-core:2.3.20.Final")

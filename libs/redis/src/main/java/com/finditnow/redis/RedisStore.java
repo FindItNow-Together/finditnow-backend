@@ -66,7 +66,6 @@ public class RedisStore {
     }
 
     public void deleteRefreshToken(String refreshToken) {
-        logger.debug("Deleting refresh token");
         try (Jedis j = pool.getResource()) {
             String key = "refresh:" + refreshToken;
             j.del(key);
@@ -89,5 +88,19 @@ public class RedisStore {
             return j.exists(key);
         }
     }
-}
 
+    /**
+     * @param ttlSeconds expiration time in seconds for the key value
+     */
+    public void setKey(String key, String value, long ttlSeconds) {
+        try (Jedis jed = pool.getResource()) {
+            jed.setex(key + ":", ttlSeconds, value);
+        }
+    }
+
+    public String getKeyValue(String key) {
+        try (Jedis jed = pool.getResource()) {
+            return jed.get(key + ":");
+        }
+    }
+}

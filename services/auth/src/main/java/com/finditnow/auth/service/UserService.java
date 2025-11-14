@@ -8,12 +8,14 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.db.UserDao;
 import com.finditnow.auth.model.User;
+import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
 import com.finditnow.jwt.JwtService;
+import com.finditnow.mail.MailService;
 import com.finditnow.redis.RedisStore;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
@@ -21,6 +23,7 @@ import io.undertow.util.Headers;
 
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
+    private static final MailService mailer = new MailService();
     private final ObjectMapper mapper = new ObjectMapper();
     private final UserDao userDao;
     private final RedisStore redis;
@@ -60,8 +63,52 @@ public class UserService {
 
         userDao.save(user);
 
+        int emailOtp = OtpGenerator.generateRandomOtp(6);
+
+        mailer.sendMail(email, "FindItNow: Email Verification", String
+                .format("Your email verification code: <strong style=\"font-size:18px\">%d</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        emailOtp));
+
+        redis.setKey("emailOtp:" + id, String.valueOf(emailOtp), 2 * 60L);
+
         exchange.setStatusCode(201);
         exchange.getResponseSender().send("{\"message\":\"user_created\",\"user_id\":\"" + id + "\"}");
+    }
+
+    public void verifyEmail(HttpServerExchange exchange) throws Exception{
+        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        Map<String, String> bodyMap = mapper.readValue(body, Map.class);
+
+        String reqUserId = bodyMap.get("userId");
+        String verificationOtp = bodyMap.get("verificationCode");
+
+        if(reqUserId==null || verificationOtp == null){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
+            return;
+        }
+
+        String storedOtp = redis.getKeyValue("emailOtp:"+reqUserId);
+
+        if(storedOtp==null){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"otp not found\"}");
+            return;
+        }
+
+        if(!storedOtp.equals(verificationOtp)){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"invalid otp\"}");
+            return;
+        }
+
+        Map<String, Object> updateFields = new HashMap<>();
+
+        updateFields.put("isEmailVerified", true);
+        userDao.updateUserById(reqUserId, updateFields);
+
+        exchange.setStatusCode(201);
+        exchange.getResponseSender().send("{\"message\":\"user email verified\",\"user_id\":\"" + reqUserId + "\"}");
     }
 
     // signin using email or phone or username + password
@@ -91,40 +138,45 @@ public class UserService {
 
         Map<String, String> resp = new HashMap<>();
         resp.put("access_token", accessToken);
-        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + refreshToken + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
+        exchange.getResponseHeaders().put(Headers.SET_COOKIE,
+                "refresh_token=" + refreshToken + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
     public void logout(HttpServerExchange exchange) throws Exception {
-        String reqBody = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
-        Map<String, String> reqMap = mapper.readValue(reqBody, Map.class);
-
-        String logoutUserId = reqMap.get("logout_user_id");
-        String logoutUserProfile = reqMap.getOrDefault("logout_user_profile", "customer");
-        String accessToken = reqMap.get("access_token");
-
-        if (logoutUserId == null || logoutUserId.isEmpty()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
+        if (authHeader == null || authHeader.isEmpty()) {
+            exchange.setStatusCode(401);
+            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
             return;
         }
 
+        String accessToken;
+
+        try {
+            accessToken = authHeader.split(" ", 2)[1];
+        } catch (Exception e) {
+            exchange.setStatusCode(401);
+            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
+            return;
+        }
+
+        Map<String, String> tokenUserInfo = jwt.parseTokenToUser(accessToken);
+
         // Delete refresh token from DB and Redis
-        String dbRefreshToken = userDao.logoutSession(logoutUserId, logoutUserProfile);
+        String dbRefreshToken = userDao.logoutSession(tokenUserInfo.get("userId"), tokenUserInfo.get("profile"));
         redis.deleteRefreshToken(dbRefreshToken);
 
         // Blacklist the access token if provided
-        if (accessToken != null && !accessToken.isEmpty()) {
-            try {
-                long ttlSeconds = jwt.getTokenRemainingTtlSeconds(accessToken);
-                if (ttlSeconds > 0) {
-                    redis.blacklistAccessToken(accessToken, ttlSeconds);
-                }
-            } catch (Exception e) {
-                // Log error but don't fail logout if token blacklisting fails
-                logger.warn("Failed to blacklist access token during logout", e);
+        try {
+            long ttlSeconds = jwt.getTokenRemainingTtlSeconds(accessToken);
+            if (ttlSeconds > 0) {
+                redis.blacklistAccessToken(accessToken, ttlSeconds);
             }
+        } catch (Exception e) {
+            // Log error but don't fail logout if token blacklisting fails
+            logger.warn("Failed to blacklist access token during logout", e);
         }
 
         exchange.getResponseSender().send("{\"message\":\"logged out successfully\"}");
@@ -160,7 +212,7 @@ public class UserService {
             exchange.getResponseSender().send("{\"error\":\"invalid_refresh\"}");
             return;
         }
-        
+
         String userId = info.get("userId");
         String profile = info.get("profile");
 
@@ -181,4 +233,3 @@ public class UserService {
         return id;
     }
 }
-

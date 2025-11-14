@@ -2,6 +2,8 @@ package com.finditnow.jwt;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 
@@ -72,6 +74,16 @@ public class JwtService {
     // validate externally in code when needed
     public Jws<Claims> parseClaims(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+    }
+
+    // get user info from the token
+    public Map<String, String> parseTokenToUser(String token){
+        Jws<Claims> claims = parseClaims(token);
+        Map<String, String> userInfo = new HashMap<>();
+        userInfo.put("userId", claims.getPayload().getSubject());
+        userInfo.put("profile", claims.getPayload().get("profile", String.class));
+
+        return userInfo;
     }
 
     /**

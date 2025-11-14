@@ -18,6 +18,7 @@ include("libs:config")
 include("libs:database")
 include("libs:redis")
 include("libs:jwt")
+include("libs:mail")
 
 // Services
 include("services:auth")

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -27,6 +28,30 @@ public class UserDao {
             stmt.setString(3, user.getEmail());
             stmt.setString(4, user.getPhoneNo());
             stmt.setString(5, user.getPasswordHash());
+
+            stmt.executeUpdate();
+        }
+    }
+
+    public void updateUserById(String userId, Map<String, Object> newFieldValues) throws SQLException{
+
+        StringBuilder setPart = new StringBuilder();
+            for (String column : newFieldValues.keySet()) {
+                if (setPart.length() > 0) {
+                    setPart.append(", ");
+                }
+                setPart.append(column).append(" = ?");
+            }
+
+            String updateQuery = "UPDATE users SET " + setPart.toString();
+
+        try (Connection conn = dataSource.getConnection();) {
+            PreparedStatement stmt = conn.prepareStatement(updateQuery);
+
+            int fieldIndex = 1;
+            for(Object value: newFieldValues.values()){
+                stmt.setObject(fieldIndex++, value);
+            }
 
             stmt.executeUpdate();
         }
@@ -122,4 +147,3 @@ public class UserDao {
         }
     }
 }
-

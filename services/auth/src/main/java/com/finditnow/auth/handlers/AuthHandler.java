@@ -62,6 +62,7 @@ public class AuthHandler {
         Map<String, String> routeMap = new HashMap<>();
         routeMap.put("/signin", "POST");
         routeMap.put("/signup", "POST");
+        routeMap.put("/verifyemail", "POST");
         routeMap.put("/oauth/google/signin", "POST");
         routeMap.put("/refresh", "POST");
         routeMap.put("/logout", "POST");
@@ -78,7 +79,7 @@ public class AuthHandler {
         }
 
         String expectedMethod = routeMap.get(route);
-        
+
         if (!expectedMethod.equalsIgnoreCase(exchange.getRequestMethod().toString())) {
             exchange.setStatusCode(405);
             exchange.getResponseSender().send("{\"error\":\"invalid request\"}");
@@ -92,6 +93,9 @@ public class AuthHandler {
                 break;
             case "/signup":
                 userService.signUp(exchange);
+                break;
+            case "/verifyemail":
+                userService.verifyEmail(exchange);
                 break;
             case "/oauth/google/signin":
                 oauthService.handleGoogle(exchange);
