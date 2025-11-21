@@ -15,11 +15,14 @@ import redis.clients.jedis.JedisPool;
 public class RedisStore {
     private static final Logger logger = LoggerFactory.getLogger(RedisStore.class);
     private static RedisStore store;
-    private JedisPool pool;
+    private final JedisPool pool;
 
     private RedisStore() {
+        String redisHost = Config.get("REDIS_HOST", "localhost");
+        int redisPort = Integer.parseInt(Config.get("REDIS_PORT", "6379"));
 
-    };
+        this.pool = new JedisPool(redisHost, redisPort);;
+    }
 
     public static RedisStore getInstance() {
         if (store != null)
@@ -27,20 +30,13 @@ public class RedisStore {
 
         store = new RedisStore();
 
-        String redisHost = Config.get("REDIS_HOST", "localhost");
-        int redisPort = Integer.parseInt(Config.get("REDIS_PORT", "6379"));
-
-        JedisPool pool = new JedisPool(redisHost, redisPort);
-
-        try (Jedis j = pool.getResource()) {
-            store.pool = pool;
+        try (Jedis j = store.pool.getResource()) {
             logger.info("Redis connection successful");
-            return store;
         } catch (Exception e) {
             logger.error("Failed to connect to Redis", e);
             throw new RuntimeException("Failed to connect to Redis", e);
         }
-
+        return store;
     }
 
     public void putRefreshToken(String refreshToken, String userId, String profile, long ttlMillis) {

@@ -1,14 +1,17 @@
 package com.finditnow.common;
 
-import java.util.function.Supplier;
+import java.security.SecureRandom;
 
 public class OtpGenerator {
     //generates 4 character long random otp
-    public static int generateRandomOtp(){
-        return generateRandomOtp(4);
+    public static String generateSecureOtp(){
+        return generateSecureOtp(4);
     }
 
-    public static int generateRandomOtp(int length){
-        return (int)(Math.random()*Math.pow(10, length));
+    public static String generateSecureOtp(int length) {
+        SecureRandom random = new SecureRandom();
+        int max = (int) Math.pow(10, length);
+        int num = random.nextInt(max);  // random number from 0 to max-1
+        return String.format("%0" + length + "d", num);
     }
 }

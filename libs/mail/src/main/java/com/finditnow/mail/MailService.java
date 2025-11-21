@@ -1,23 +1,19 @@
 package com.finditnow.mail;
 
 import com.finditnow.config.Config;
-
-import jakarta.mail.BodyPart;
 import jakarta.mail.Message;
 import jakarta.mail.MessagingException;
-import jakarta.mail.Multipart;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
 
 public class MailService {
     private final Session session;
     private final String from;
 
     public MailService() {
-        String userName = Config.get("EMAIL_APP_USERNAME", "services.mancomunited@gmail.com");
+        String userName = Config.get("EMAIL_APP_USERNAME", "example@example.com");
         String userPwd = Config.get("EMAIL_APP_PWD", "very_secure_app_password");
 
         this.session = MailConfig.createSession(userName, userPwd);
@@ -31,9 +27,7 @@ public class MailService {
             message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
             message.setSubject(subject);
 
-                
-
-            message.setContent(body,"text/html; charset=utf-8");
+            message.setContent(body, "text/html; charset=utf-8");
 
             Transport.send(message);
             System.out.println("Mail sent successfully to " + to);
@@ -42,6 +36,4 @@ public class MailService {
             System.err.println("Mail communication failed:: REASON: " + e.getMessage());
         }
     }
-    
-
 }

@@ -1,5 +1,7 @@
 package com.finditnow.auth;
 
+import com.finditnow.auth.config.DatabaseMigrations;
+import com.finditnow.scheduler.Scheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,18 +13,22 @@ import com.finditnow.database.Database;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
 
+import javax.sql.DataSource;
+
 public class AuthApp {
     private static final Logger logger = LoggerFactory.getLogger(AuthApp.class);
 
     public static void main(String[] args) {
+
         try {
-            Database db = new Database();
+            DataSource ds = new Database().get();
+            DatabaseMigrations.migrate(ds);
             RedisStore redis = RedisStore.getInstance();
-            JwtService jwt = JwtService.getInstance();
-            UserDao userDao = new UserDao(db);
+            JwtService jwt = new JwtService();
+            UserDao userDao = new UserDao(ds);
             UserService usrService = new UserService(userDao, redis, jwt);
             OAuthService oauth = new OAuthService(usrService, jwt);
-
+            Scheduler.init();
             new HTTPServer(usrService, oauth).start();
         } catch (Exception e) {
             logger.error("Failed to start server", e);

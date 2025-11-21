@@ -14,8 +14,8 @@ import com.finditnow.database.Database;
 public class UserDao {
     private final DataSource dataSource;
 
-    public UserDao(Database db) {
-        this.dataSource = db.get();
+    public UserDao(DataSource ds) {
+        this.dataSource = ds;
     }
 
     public void save(User user) throws SQLException {
@@ -73,7 +73,6 @@ public class UserDao {
 
                 return user;
             }
-
         }
     }
 

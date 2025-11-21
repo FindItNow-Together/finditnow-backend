@@ -19,6 +19,11 @@ include("libs:database")
 include("libs:redis")
 include("libs:jwt")
 include("libs:mail")
+include("libs:quartz-scheduler")
 
 // Services
 include("services:auth")
+
+include("services:user-service")
+
+include("libs:dispatcher")

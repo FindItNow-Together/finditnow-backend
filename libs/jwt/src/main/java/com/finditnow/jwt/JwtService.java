@@ -1,40 +1,27 @@
 package com.finditnow.jwt;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.crypto.SecretKey;
-
 import com.finditnow.config.Config;
 import com.finditnow.redis.RedisStore;
-
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 public class JwtService {
-    private static JwtService jwt;
-    private SecretKey key;
+    private final SecretKey key;
     private final long accessTokenMillis = 15 * 60 * 1000L; // 15 min
 
-    private JwtService() {
-    }
-
-    public static JwtService getInstance() {
-        if (jwt != null)
-            return jwt;
-
-        jwt = new JwtService();
-
+    public JwtService() {
         String secret = Config.get("JWT_SECRET", "VERY_LONG_unimaginable_SECRET111");
         byte[] bytes = secret.getBytes(StandardCharsets.UTF_8);
-        jwt.key = Keys.hmacShaKeyFor(bytes);
-
-        return jwt;
+        this.key = Keys.hmacShaKeyFor(bytes);
     }
 
     public String generateAccessToken(String userId, String authProfile) {
@@ -50,6 +37,7 @@ public class JwtService {
 
     /**
      * Validate a token with blacklist checking. This method can be used by other microservices.
+     *
      * @param token The JWT token to validate
      * @param redis RedisStore instance for blacklist checking (can be null to skip blacklist check)
      * @return Jws<Claims> if valid, null if invalid or blacklisted
@@ -77,7 +65,7 @@ public class JwtService {
     }
 
     // get user info from the token
-    public Map<String, String> parseTokenToUser(String token){
+    public Map<String, String> parseTokenToUser(String token) {
         Jws<Claims> claims = parseClaims(token);
         Map<String, String> userInfo = new HashMap<>();
         userInfo.put("userId", claims.getPayload().getSubject());
@@ -88,6 +76,7 @@ public class JwtService {
 
     /**
      * Get the expiration time remaining for a token in seconds
+     *
      * @param token The JWT token
      * @return Remaining TTL in seconds, or 0 if token is expired or invalid
      */

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+import com.finditnow.dispatcher.EmailDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,7 +24,7 @@ import io.undertow.util.Headers;
 
 public class UserService {
     private static final Logger logger = LoggerFactory.getLogger(UserService.class);
-    private static final MailService mailer = new MailService();
+    private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
     private final ObjectMapper mapper = new ObjectMapper();
     private final UserDao userDao;
     private final RedisStore redis;
@@ -63,11 +64,11 @@ public class UserService {
 
         userDao.save(user);
 
-        int emailOtp = OtpGenerator.generateRandomOtp(6);
+        String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-        mailer.sendMail(email, "FindItNow: Email Verification", String
-                .format("Your email verification code: <strong style=\"font-size:18px\">%d</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
-                        emailOtp));
+        mailer.send(email, "FindItNow: Email Verification", String
+                .format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        emailOtp), true);
 
         redis.setKey("emailOtp:" + id, String.valueOf(emailOtp), 2 * 60L);
 
@@ -109,6 +110,45 @@ public class UserService {
 
         exchange.setStatusCode(201);
         exchange.getResponseSender().send("{\"message\":\"user email verified\",\"user_id\":\"" + reqUserId + "\"}");
+    }
+
+    public void resendVerificationEmail(HttpServerExchange exchange) throws Exception{
+        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        Map<String, String> bodyMap = mapper.readValue(body, Map.class);
+        String email = bodyMap.get("email");
+
+        //email is required for sending verification email
+        if(email==null || email.isEmpty()){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
+            return;
+        }
+
+        if(!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
+            return;
+        }
+
+        User user  = userDao.findByEmail(email);
+
+        if(user==null){
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"email not registered\"}");
+            return;
+        }
+
+        String userId = user.getId();
+
+        String emailOtp = OtpGenerator.generateSecureOtp(6);
+
+        mailer.send(email, "FindItNow: Email Verification", String
+                .format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        emailOtp), true);
+
+        redis.setKey("emailOtp:" + userId, String.valueOf(emailOtp), 2 * 60L);
+        exchange.setStatusCode(201);
+        exchange.getResponseSender().send("{\"message\":\"user_created\",\"user_id\":\"" + userId + "\"}");
     }
 
     // signin using email or phone or username + password
