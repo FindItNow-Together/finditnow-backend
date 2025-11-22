@@ -13,6 +13,7 @@ dependencies {
     implementation(project(":libs:redis"))
     implementation(project(":libs:jwt"))
     implementation(project(":libs:dispatcher"))
+    implementation(project(":libs:proto"))//grpc
 
     // HTTP Server
     implementation("io.undertow:undertow-core:2.3.20.Final")
@@ -31,6 +32,7 @@ dependencies {
     // DB Migrations
     implementation("org.flywaydb:flyway-core:11.17.0")
     runtimeOnly("org.flywaydb:flyway-database-postgresql:11.17.0")
+
 }
 
 java {

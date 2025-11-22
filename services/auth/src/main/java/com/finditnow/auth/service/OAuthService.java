@@ -11,11 +11,11 @@ import io.undertow.server.HttpServerExchange;
 
 public class OAuthService {
     private final ObjectMapper mapper = new ObjectMapper();
-    private final UserService userService;
+    private final AuthService authService;
     private final JwtService jwt;
 
-    public OAuthService(UserService userService, JwtService jwt) {
-        this.userService = userService;
+    public OAuthService(AuthService authService, JwtService jwt) {
+        this.authService = authService;
         this.jwt = jwt;
     }
 
@@ -38,11 +38,11 @@ public class OAuthService {
 
         String email = (String) payload.get("email");
 
-        String userId = userService.findOrCreateUserByEmail(email);
+        String userId = authService.findOrCreateUserByEmail(email);
 
         String profile = req.getOrDefault("auth_profile", "customer").toString();
 
-        String refreshToken = userService.createSession(userId, "google", profile, 7L * 24 * 60 * 60 * 1000L);
+        String refreshToken = authService.createSession(userId, "google", profile, 7L * 24 * 60 * 60 * 1000L);
 
         String access = jwt.generateAccessToken(userId, profile);
 

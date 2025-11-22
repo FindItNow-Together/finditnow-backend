@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.finditnow.auth.handlers.AuthHandler;
 import com.finditnow.auth.service.OAuthService;
-import com.finditnow.auth.service.UserService;
+import com.finditnow.auth.service.AuthService;
 import com.finditnow.config.Config;
 
 import io.undertow.Undertow;
@@ -17,7 +17,7 @@ public class HTTPServer {
     private final int httpPort = Integer.parseInt(Config.get("HTTPPort", "8080"));
     private final AuthHandler authHandler;
 
-    public HTTPServer(UserService usrService, OAuthService oauth) {
+    public HTTPServer(AuthService usrService, OAuthService oauth) {
         authHandler = new AuthHandler(usrService, oauth);
     }
 

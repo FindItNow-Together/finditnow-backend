@@ -7,7 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.finditnow.auth.service.OAuthService;
-import com.finditnow.auth.service.UserService;
+import com.finditnow.auth.service.AuthService;
 
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -15,11 +15,11 @@ import io.undertow.util.AttachmentKey;
 public class AuthHandler {
     private static final Logger logger = LoggerFactory.getLogger(AuthHandler.class);
     private static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
-    private final UserService userService;
+    private final AuthService authService;
     private final OAuthService oauthService;
 
-    public AuthHandler(UserService usrService, OAuthService oauth) {
-        userService = usrService;
+    public AuthHandler(AuthService usrService, OAuthService oauth) {
+        authService = usrService;
         oauthService = oauth;
     }
 
@@ -89,22 +89,22 @@ public class AuthHandler {
 
         switch (route) {
             case "/signin":
-                userService.signIn(exchange);
+                authService.signIn(exchange);
                 break;
             case "/signup":
-                userService.signUp(exchange);
+                authService.signUp(exchange);
                 break;
             case "/verifyemail":
-                userService.verifyEmail(exchange);
+                authService.verifyEmail(exchange);
                 break;
             case "/oauth/google/signin":
                 oauthService.handleGoogle(exchange);
                 break;
             case "/refresh":
-                userService.refresh(exchange);
+                authService.refresh(exchange);
                 break;
             case "/logout":
-                userService.logout(exchange);
+                authService.logout(exchange);
                 break;
             case "/health":
                 exchange.setStatusCode(200);

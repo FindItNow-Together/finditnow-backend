@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package finditnow.user;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.finditnow.user";
+option java_multiple_files = true;
+
+// Profile stored in user-service only
+message UserProfile {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string avatar_url = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// ------------------------ Requests ------------------------
+
+message CreateUserProfileRequest {
+  string id = 1;
+  string email = 2;
+  string name = 3;
+  string avatar_url = 4;
+}
+
+// ------------------------ Responses ------------------------
+
+message UserProfileResponse {
+  UserProfile user = 1;
+}
+
+// ----------------------- Service --------------------------
+
+service UserService {
+  rpc CreateUserProfile(CreateUserProfileRequest) returns (UserProfileResponse);
+  rpc GetUserById(GetUserByIdRequest) returns (UserProfileResponse);
+  rpc GetUserByEmail(GetUserByEmailRequest) returns (UserProfileResponse);
+}
+
+message GetUserByIdRequest {
+  string id = 1;
+}
+
+message GetUserByEmailRequest {
+  string email = 1;
+}
