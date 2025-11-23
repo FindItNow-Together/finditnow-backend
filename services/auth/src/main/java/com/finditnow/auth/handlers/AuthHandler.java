@@ -21,8 +21,7 @@ public class AuthHandler {
         oauthService = oauth;
     }
 
-    public final void route(HttpServerExchange exchange)
-            throws Exception {
+    public final void route(HttpServerExchange exchange) throws Exception {
 
         if (exchange.isInIoThread()) {
             // Track request start time early
@@ -38,8 +37,7 @@ public class AuthHandler {
                     if (start != null) {
                         executionTimeMs = (System.nanoTime() - start) / 1_000_000;
                     }
-                    logger.error("Exception handling request {} {} - {}ms",
-                            exchange.getRequestMethod(), exchange.getRequestPath(), executionTimeMs, e);
+                    logger.error("Exception handling request {} {} - {}ms", exchange.getRequestMethod(), exchange.getRequestPath(), executionTimeMs, e);
                     exchange.setStatusCode(500);
                     exchange.getResponseSender().send("{\"error\":\"internal_error\"}");
                 }
@@ -61,9 +59,14 @@ public class AuthHandler {
         routeMap.put("/signin", "POST");
         routeMap.put("/signup", "POST");
         routeMap.put("/verifyemail", "POST");
+        routeMap.put("/resendverificationemail", "POST");
         routeMap.put("/oauth/google/signin", "POST");
         routeMap.put("/refresh", "POST");
         routeMap.put("/logout", "POST");
+        routeMap.put("/sendresettoken", "POST");
+        routeMap.put("/verifyresettoken", "GET");
+        routeMap.put("/resetpassword", "PUT");
+        routeMap.put("/updatepassword", "PUT");
         routeMap.put("/health", "GET");
 
         String route = exchange.getRequestPath();
@@ -95,6 +98,9 @@ public class AuthHandler {
             case "/verifyemail":
                 authService.verifyEmail(exchange);
                 break;
+            case "/resendverificationemail":
+                authService.resendVerificationEmail(exchange);
+                break;
             case "/oauth/google/signin":
                 oauthService.handleGoogle(exchange);
                 break;
@@ -103,6 +109,19 @@ public class AuthHandler {
                 break;
             case "/logout":
                 authService.logout(exchange);
+                break;
+
+            case "/sendresettoken":
+                authService.sendResetPwdToken(exchange);
+                break;
+            case "/verifyresettoken":
+                authService.verifyResetToken(exchange);
+                break;
+            case "/resetpassword":
+                authService.resetPassword(exchange);
+                break;
+            case "/updatepassword":
+                authService.updatePassword(exchange);
                 break;
             case "/health":
                 exchange.setStatusCode(200);

@@ -20,6 +20,7 @@ import io.undertow.util.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
@@ -45,11 +46,10 @@ public class AuthService {
 
     // signup with email + password
     public void signUp(HttpServerExchange exchange) throws Exception {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> req = mapper.readValue(body, Map.class);
+        Map<String, String> req = getRequestBody(exchange);
         String email = req.get("email");
         String username = req.get("username");
-        String phone = req.get("phone_no");
+        String phone = req.get("phone");
         String password = req.get("password");
 
         if ((email == null && phone == null && username == null) || password == null) {
@@ -66,6 +66,13 @@ public class AuthService {
 
         UUID credId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+
+//        if(!PasswordUtil.checkPwdString(password)) {
+//            exchange.setStatusCode(409);
+//            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
+//            return;
+//        }
+
         String pwHash = PasswordUtil.hash(password);
 
         AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, false, false, OffsetDateTime.now());
@@ -79,8 +86,7 @@ public class AuthService {
     }
 
     public void verifyEmail(HttpServerExchange exchange) throws Exception {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> bodyMap = mapper.readValue(body, Map.class);
+        Map<String, String> bodyMap = getRequestBody(exchange);
 
         String credId = bodyMap.get("credId");
         String verificationOtp = bodyMap.get("verificationCode");
@@ -108,7 +114,7 @@ public class AuthService {
         Map<String, Object> updateFields = new HashMap<>();
 
         updateFields.put("is_email_verified", true);
-        authDao.credDao.updateCredFieldsById(credId, updateFields);
+        authDao.credDao.updateCredFieldsById(UUID.fromString(credId), updateFields);
 
         Optional<AuthCredential> authCred = authDao.credDao.findById(UUID.fromString(credId));
         AuthCredential cred = authCred.get();
@@ -141,8 +147,7 @@ public class AuthService {
     }
 
     public void resendVerificationEmail(HttpServerExchange exchange) throws Exception {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> bodyMap = mapper.readValue(body, Map.class);
+        Map<String, String> bodyMap = getRequestBody(exchange);
         String email = bodyMap.get("email");
 
         //email is required for sending verification email
@@ -184,10 +189,158 @@ public class AuthService {
         redis.setKey("emailOtp:" + credId, String.valueOf(emailOtp), 2 * 60L);
     }
 
+    public void sendResetPwdToken(HttpServerExchange exchange) throws Exception {
+        Map<String, String> bodyMap = getRequestBody(exchange);
+        String email = bodyMap.get("email");
+        String phone = bodyMap.get("phone");
+
+        if (email == null && phone == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
+            return;
+        }
+
+//        if (email!=null && !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+//            exchange.setStatusCode(400);
+//            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
+//            return;
+//        }
+
+        Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
+
+        if (authCred.isEmpty()) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"email not registered\"}");
+            return;
+        }
+
+        String resetOtp = OtpGenerator.generateSecureOtp(8);
+        mailer.send(email, "Reset Password Token:Finditnow", String.format("Your reset password token: <strong style=\\\"font-size:18px\\\">%s</strong>.<br><p style=\\\"font-weight:700\\\">" + "This email is system generated. Do not reply</p>", resetOtp), true);
+        redis.setKey("resetOtp:" + email, resetOtp, Duration.ofMinutes(5).toSeconds());
+
+        exchange.setStatusCode(200);
+        exchange.getResponseSender().send("{\"message\":\"verification email resent\", \"tokenValiditySeconds\": \"300\"}");
+    }
+
+
+    public void verifyResetToken(HttpServerExchange exchange) throws Exception {
+        Map<String, String> bodyMap = getRequestBody(exchange);
+        String email = bodyMap.get("email");
+        String phone = bodyMap.get("phone");
+        String token = bodyMap.get("resetToken");
+
+        if (email == null && phone == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
+            return;
+        }
+        if (token == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"missing_token\"}");
+            return;
+        }
+
+//        if (email!=null && !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+//            exchange.setStatusCode(400);
+//            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
+//            return;
+//        }
+
+        String storedToken = redis.getKeyValue("resetOtp:" + email);
+        if (storedToken == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"invalid_token\"}");
+            return;
+        }
+
+        if (!storedToken.equals(token)) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"invalid_token\"}");
+            return;
+        }
+
+        redis.deleteKey("resetOtp:" + email);
+        redis.setKey("resetAllowed:" + email, String.valueOf(true), Duration.ofMinutes(2).toSeconds());
+        exchange.setStatusCode(200);
+        exchange.getResponseSender().send("{\"message\":\"token_verified\"}");
+    }
+
+    public void resetPassword(HttpServerExchange exchange) throws Exception {
+        Map<String, String> bodyMap = getRequestBody(exchange);
+
+        String email = bodyMap.get("email");
+        String phone = bodyMap.get("phone");
+        String password = bodyMap.get("newPassword");
+
+        if (email == null && phone == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"either phone or email is required\"}");
+            return;
+        }
+
+        if (password == null || password.isEmpty()) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"password is required\"}");
+            return;
+        }
+
+//        if(!PasswordUtil.checkPwdString(password)) {
+//            exchange.setStatusCode(409);
+//            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
+//            return;
+//        }
+
+        if (redis.getKeyValue("resetAllowed:" + email) != null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"reset window exceeded\"}");
+            return;
+        }
+
+        AuthCredential cred = authDao.credDao.findByEmail(email).get();
+
+        Map<String, Object> updateFields = new HashMap<>();
+
+        updateFields.put("password_hash", password);
+        authDao.credDao.updateCredFieldsById(cred.getId(), updateFields);
+
+        redis.deleteKey("resetAllowed:" + email);
+        exchange.setStatusCode(200);
+        exchange.getResponseSender().send("{\"message\":\"password updated\"}");
+    }
+
+    public void updatePassword(HttpServerExchange exchange) throws Exception {
+        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.setStatusCode(401);
+            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
+            return;
+        }
+        Map<String, String> bodyMap = getRequestBody(exchange);
+
+        String newPassword;
+        if ((newPassword = bodyMap.get("newPassword")) == null) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"password_required\"}");
+            return;
+        }
+
+        if (!PasswordUtil.checkPwdString(newPassword)) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
+            return;
+        }
+
+        Map<String, String> authInfo = jwt.parseTokenToUser(authHeader.substring(7));
+
+
+        Map<String, Object> updateFields = new HashMap<>();
+        updateFields.put("password_hash", newPassword);
+        authDao.credDao.updateCredFieldsById(UUID.fromString(authInfo.get("credId")), updateFields);
+    }
+
     // signin using email or phone or username + password
     public void signIn(HttpServerExchange exchange) throws Exception {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> req = mapper.readValue(body, Map.class);
+        Map<String, String> req = getRequestBody(exchange);
         String identifier = req.get("identifier"); // email or phone or username
         String password = req.get("password");
         String authProfile = req.getOrDefault("auth_profile", "customer");
@@ -217,6 +370,12 @@ public class AuthService {
         resp.put("access_token", accessToken);
         exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
+    }
+
+    private Map<String, String> getRequestBody(HttpServerExchange exchange) throws IOException {
+        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        Map<String, String> req = mapper.readValue(body, Map.class);
+        return req;
     }
 
     public void logout(HttpServerExchange exchange) throws Exception {

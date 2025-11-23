@@ -16,6 +16,3 @@ ALTER TABLE public.users
 
 ALTER TABLE public.users
     ADD CONSTRAINT uq_users_phone UNIQUE (phone);
-
-ALTER TABLE public.users
-    ADD CONSTRAINT uq_users_username UNIQUE (username);

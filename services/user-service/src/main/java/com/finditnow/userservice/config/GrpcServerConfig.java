@@ -13,7 +13,7 @@ public class GrpcServerConfig {
     @Bean(destroyMethod = "shutdown")
     public Server grpcServer(UserServiceGrpc.UserServiceImplBase userServiceImpl) throws Exception {
         System.out.println(">>> [GrpcServerConfig] Bean creation triggered");
-        Server server =ServerBuilder
+        Server server = ServerBuilder
                 .forPort(Integer.parseInt(Config.get("GRPC_SERVER_PORT", "8082")))
                 .addService(userServiceImpl)
                 .build()

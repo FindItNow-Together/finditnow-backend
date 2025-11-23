@@ -100,7 +100,7 @@ public class AuthCredentialDao {
         }
     }
 
-    public void updateCredFieldsById(String credId, Map<String, Object> newFieldValues) {
+    public void updateCredFieldsById(UUID id, Map<String, Object> newFieldValues) {
         StringBuilder setPart = new StringBuilder();
         for (String column : newFieldValues.keySet()) {
             if (!setPart.isEmpty()) {
@@ -109,7 +109,7 @@ public class AuthCredentialDao {
             setPart.append(column).append(" = ?");
         }
 
-        String updateQuery = "UPDATE auth_credentials SET " + setPart.toString();
+        String updateQuery = "UPDATE auth_credentials SET " + setPart + " WHERE id = ?";
 
 
         try (Connection conn = dataSource.getConnection();
@@ -120,6 +120,7 @@ public class AuthCredentialDao {
                 ps.setObject(fieldIndex++, value);
             }
 
+            ps.setObject(fieldIndex, id);
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);

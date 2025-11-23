@@ -98,4 +98,14 @@ public class RedisStore {
             return jed.get(key + ":");
         }
     }
+
+    /**
+     *
+     * @param key key to be deleted from the redis store
+     */
+    public void deleteKey(String key) {
+        try (Jedis jed = pool.getResource()) {
+            jed.del(key);
+        }
+    }
 }

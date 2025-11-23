@@ -11,7 +11,6 @@ import java.util.UUID;
 public class User {
 
     @Id
-    @GeneratedValue
     @Column(columnDefinition = "uuid")
     private UUID id;
 
@@ -27,9 +26,6 @@ public class User {
     @Column(unique = true)
     private String phone;
 
-    @Column(unique = true)
-    private String username; // optional, may be null initially
-
     @Column(name = "profile_url")
     private String profileUrl; // nullable
 
@@ -40,13 +36,8 @@ public class User {
     private List<UserAddress> addresses;
 
     // getters & setters omitted for brevity
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
+    public void setId(UUID id) {
+        this.id = id;
     }
 
     public String getFirstName() {
@@ -63,5 +54,13 @@ public class User {
 
     public void setLastName(String lastName) {
         this.lastName = lastName;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
     }
 }

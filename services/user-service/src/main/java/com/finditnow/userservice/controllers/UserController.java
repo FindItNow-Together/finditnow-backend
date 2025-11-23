@@ -23,7 +23,7 @@ public class UserController {
 
     @GetMapping("/users/me")
     public String getUser(HttpServletRequest request) {
-        String userId = (String)request.getAttribute("userId");
+        String userId = (String) request.getAttribute("userId");
         return "User ID: " + userId;
     }
 }
