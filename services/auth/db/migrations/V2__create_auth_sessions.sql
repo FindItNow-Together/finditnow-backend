@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS auth_sessions (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL,
+    cred_id UUID NOT NULL,
     session_token TEXT UNIQUE NOT NULL,
     session_method VARCHAR(30),
     ip_address INET,

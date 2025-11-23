@@ -1,6 +1,9 @@
 package com.finditnow.userservice.grpc;
 
-import com.finditnow.user.*;
+import com.finditnow.user.CreateUserProfileRequest;
+import com.finditnow.user.UserProfile;
+import com.finditnow.user.UserProfileResponse;
+import com.finditnow.user.UserServiceGrpc;
 import io.grpc.stub.StreamObserver;
 import org.springframework.stereotype.Service;
 

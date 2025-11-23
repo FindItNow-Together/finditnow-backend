@@ -24,10 +24,11 @@ public class JwtService {
         this.key = Keys.hmacShaKeyFor(bytes);
     }
 
-    public String generateAccessToken(String userId, String authProfile) {
+    public String generateAccessToken(String sessionId, String credId, String userId, String authProfile) {
         long now = System.currentTimeMillis();
         return Jwts.builder()
-                .subject(userId)
+                .subject(sessionId).claim("credId", credId)
+                .claim("userId", userId)
                 .claim("profile", authProfile)
                 .issuedAt(new Date(now))
                 .expiration(new Date(now + accessTokenMillis))
@@ -68,7 +69,9 @@ public class JwtService {
     public Map<String, String> parseTokenToUser(String token) {
         Jws<Claims> claims = parseClaims(token);
         Map<String, String> userInfo = new HashMap<>();
-        userInfo.put("userId", claims.getPayload().getSubject());
+        userInfo.put("sessionId", claims.getPayload().getSubject());
+        userInfo.put("credId", claims.getPayload().get("credId", String.class));
+        userInfo.put("userId", claims.getPayload().get("userId", String.class));
         userInfo.put("profile", claims.getPayload().get("profile", String.class));
 
         return userInfo;
@@ -82,7 +85,7 @@ public class JwtService {
      */
     public long getTokenRemainingTtlSeconds(String token) {
         try {
-            Jws<Claims> jws = Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+            Jws<Claims> jws = parseClaims(token);
             Date expiration = jws.getPayload().getExpiration();
             if (expiration == null) {
                 return accessTokenMillis / 1000L; // Default to access token TTL

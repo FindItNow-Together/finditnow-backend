@@ -1,6 +1,5 @@
 package com.finditnow.auth.config;
 
-import com.finditnow.config.Config;
 import org.flywaydb.core.Flyway;
 
 import javax.sql.DataSource;

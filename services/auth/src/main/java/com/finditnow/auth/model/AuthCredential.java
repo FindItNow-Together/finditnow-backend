@@ -1,7 +1,6 @@
 package com.finditnow.auth.model;
 
 import java.time.OffsetDateTime;
-import java.util.Date;
 import java.util.UUID;
 
 /**
@@ -44,11 +43,11 @@ public class AuthCredential {
         this.createdAt = createdAt;
     }
 
-    public UUID getUuid() {
+    public UUID getId() {
         return id;
     }
 
-    public void setUuid(UUID id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 

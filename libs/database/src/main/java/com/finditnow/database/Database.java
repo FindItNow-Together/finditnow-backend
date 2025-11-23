@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.Time;
 import java.util.TimeZone;
 
 public class Database {

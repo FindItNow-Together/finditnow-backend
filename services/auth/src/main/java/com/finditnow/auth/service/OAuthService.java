@@ -1,13 +1,14 @@
 package com.finditnow.auth.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finditnow.auth.model.AuthCredential;
+import com.finditnow.auth.model.AuthSession;
+import com.finditnow.jwt.JwtService;
+import io.undertow.server.HttpServerExchange;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
-
-import com.finditnow.jwt.JwtService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.undertow.server.HttpServerExchange;
 
 public class OAuthService {
     private final ObjectMapper mapper = new ObjectMapper();
@@ -38,16 +39,18 @@ public class OAuthService {
 
         String email = (String) payload.get("email");
 
-        String userId = authService.findOrCreateUserByEmail(email);
+        AuthCredential cred = authService.findOrCreateUserByEmail(email);
 
         String profile = req.getOrDefault("auth_profile", "customer").toString();
 
-        String refreshToken = authService.createSession(userId, "google", profile, 7L * 24 * 60 * 60 * 1000L);
+        AuthSession authSession = authService.createSessionFromCred(cred);
 
-        String access = jwt.generateAccessToken(userId, profile);
+        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
+                cred.getUserId().toString(), "customer");
+        authService.addSessionToRedis(authSession);
 
         exchange.getResponseSender()
-                .send("{\"access_token\":\"" + access + "\",\"refresh_token\":\"" + refreshToken + "\"}");
+                .send("{\"access_token\":\"" + accessToken + "\",\"refresh_token\":\"" + authSession.getSessionToken() + "\"}");
     }
 
     private Map<String, Object> decodeJwtPayload(String jwt) {

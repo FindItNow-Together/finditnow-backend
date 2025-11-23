@@ -1,10 +1,12 @@
 package com.finditnow.auth.dao;
 
 import com.finditnow.auth.model.AuthCredential;
-import com.finditnow.auth.model.User;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,7 +62,7 @@ public class AuthCredentialDao {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setObject(1, c.getUuid());
+            ps.setObject(1, c.getId());
             ps.setObject(2, c.getUserId());
             ps.setString(3, c.getEmail());
             ps.setString(4, c.getPhone());
@@ -125,7 +127,7 @@ public class AuthCredentialDao {
     }
 
 
-    public void delete(UUID id) {
+    private void delete(UUID id) {
         String sql = "DELETE FROM auth_credentials WHERE id = ?";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

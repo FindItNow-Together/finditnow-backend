@@ -1,8 +1,8 @@
 package com.finditnow.mail;
 
-import java.util.Properties;
-
 import jakarta.mail.Session;
+
+import java.util.Properties;
 
 public class MailConfig {
     public static Session createSession(String username, String password) {

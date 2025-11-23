@@ -1,16 +1,14 @@
 package com.finditnow.auth.handlers;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.finditnow.auth.service.AuthService;
+import com.finditnow.auth.service.OAuthService;
+import io.undertow.server.HttpServerExchange;
+import io.undertow.util.AttachmentKey;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.finditnow.auth.service.OAuthService;
-import com.finditnow.auth.service.AuthService;
-
-import io.undertow.server.HttpServerExchange;
-import io.undertow.util.AttachmentKey;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AuthHandler {
     private static final Logger logger = LoggerFactory.getLogger(AuthHandler.class);

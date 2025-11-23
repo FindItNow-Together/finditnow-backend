@@ -6,7 +6,7 @@ import java.util.UUID;
 public class AuthSession {
 
     private UUID id;
-    private UUID userId;
+    private UUID credId;
     private String sessionToken;
     private String sessionMethod;
     private String ipAddress;
@@ -19,9 +19,13 @@ public class AuthSession {
     public AuthSession() {
     }
 
-    public AuthSession(UUID id, UUID userId, String sessionToken, String sessionMethod, String ipAddress, String userAgent, OffsetDateTime expiresAt, boolean isValid, OffsetDateTime createdAt, OffsetDateTime revokedAt) {
+    public AuthSession(UUID id, UUID credId, String sessionToken, String sessionMethod, OffsetDateTime expiresAt) {
+        this(id, credId, sessionToken, sessionMethod, null, null, expiresAt, true, OffsetDateTime.now(), null);
+    }
+
+    public AuthSession(UUID id, UUID credId, String sessionToken, String sessionMethod, String ipAddress, String userAgent, OffsetDateTime expiresAt, boolean isValid, OffsetDateTime createdAt, OffsetDateTime revokedAt) {
         this.id = id;
-        this.userId = userId;
+        this.credId = credId;
         this.sessionToken = sessionToken;
         this.sessionMethod = sessionMethod;
         this.ipAddress = ipAddress;
@@ -40,12 +44,12 @@ public class AuthSession {
         this.id = id;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public UUID getCredId() {
+        return credId;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setCredId(UUID credId) {
+        this.credId = credId;
     }
 
     public String getSessionToken() {

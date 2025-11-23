@@ -1,16 +1,13 @@
 package com.finditnow.redis;
 
-import java.util.HashMap;
-import java.util.Map;
-
+import com.finditnow.config.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.finditnow.config.Config;
-
 import redis.clients.jedis.Jedis;
-
 import redis.clients.jedis.JedisPool;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class RedisStore {
     private static final Logger logger = LoggerFactory.getLogger(RedisStore.class);
@@ -21,7 +18,8 @@ public class RedisStore {
         String redisHost = Config.get("REDIS_HOST", "localhost");
         int redisPort = Integer.parseInt(Config.get("REDIS_PORT", "6379"));
 
-        this.pool = new JedisPool(redisHost, redisPort);;
+        this.pool = new JedisPool(redisHost, redisPort);
+        ;
     }
 
     public static RedisStore getInstance() {
@@ -39,10 +37,11 @@ public class RedisStore {
         return store;
     }
 
-    public void putRefreshToken(String refreshToken, String userId, String profile, long ttlMillis) {
+    public void putRefreshToken(String refreshToken, String sessionId, String profile, long ttlMillis) {
+        System.out.println("TTLMillis: " + ttlMillis);
         try (Jedis j = pool.getResource()) {
             String key = "refresh:" + refreshToken;
-            String val = userId + "|" + profile;
+            String val = sessionId + "|" + profile;
             j.setex(key, ttlMillis / 1000L, val);
         }
     }

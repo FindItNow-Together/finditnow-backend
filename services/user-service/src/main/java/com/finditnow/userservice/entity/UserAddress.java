@@ -1,5 +1,7 @@
 package com.finditnow.userservice.entity;
+
 import jakarta.persistence.*;
+
 import java.util.UUID;
 
 @Entity

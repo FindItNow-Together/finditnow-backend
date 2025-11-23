@@ -1,16 +1,14 @@
 package com.finditnow.auth.server;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.finditnow.auth.handlers.AuthHandler;
-import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.service.AuthService;
+import com.finditnow.auth.service.OAuthService;
 import com.finditnow.config.Config;
-
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.util.Headers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HTTPServer {
     private static final Logger logger = LoggerFactory.getLogger(HTTPServer.class);

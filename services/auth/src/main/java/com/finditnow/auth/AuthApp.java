@@ -1,19 +1,16 @@
 package com.finditnow.auth;
 
 import com.finditnow.auth.config.DatabaseMigrations;
-import com.finditnow.auth.dao.AuthCredentialDao;
 import com.finditnow.auth.dao.AuthDao;
-import com.finditnow.scheduler.Scheduler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.finditnow.auth.dao.UserDao;
 import com.finditnow.auth.server.HTTPServer;
-import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.service.AuthService;
+import com.finditnow.auth.service.OAuthService;
 import com.finditnow.database.Database;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
+import com.finditnow.scheduler.Scheduler;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
 

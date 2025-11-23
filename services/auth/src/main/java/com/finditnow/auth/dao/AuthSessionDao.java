@@ -4,8 +4,14 @@ package com.finditnow.auth.dao;
 import com.finditnow.auth.model.AuthSession;
 
 import javax.sql.DataSource;
-import java.sql.*;
-import java.util.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 public class AuthSessionDao {
 
@@ -26,13 +32,13 @@ public class AuthSessionDao {
     }
 
 
-    public List<AuthSession> findActiveSessionsByUser(UUID userId) {
-        String sql = "SELECT * FROM auth_sessions WHERE user_id = ? AND is_valid = TRUE AND expires_at > NOW()";
+    public List<AuthSession> findActiveSessionsByCred(UUID credId) {
+        String sql = "SELECT * FROM auth_sessions WHERE cred_id = ? AND is_valid = TRUE AND expires_at > NOW()";
         List<AuthSession> results = new ArrayList<>();
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            ps.setObject(1, userId);
+            ps.setObject(1, credId);
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
@@ -50,18 +56,18 @@ public class AuthSessionDao {
     public void insert(AuthSession s) {
         String sql = """
                     INSERT INTO auth_sessions
-                    (id, user_id, session_token, session_method, ip_address, user_agent, expires_at,
+                    (id, cred_id, session_token, session_method, ip_address, user_agent, expires_at,
                      is_valid, created_at, revoked_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+                    VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, NOW(), ?)
                 """;
 
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setObject(1, s.getId());
-            ps.setObject(2, s.getUserId());
+            ps.setObject(2, s.getCredId());
             ps.setString(3, s.getSessionToken());
             ps.setString(4, s.getSessionMethod());
-            ps.setString(5, s.getIpAddress());   // stored as text -> PostgreSQL converts
+            ps.setString(5, s.getIpAddress());
             ps.setString(6, s.getUserAgent());
             ps.setObject(7, s.getExpiresAt());
             ps.setBoolean(8, s.isValid());
@@ -75,7 +81,12 @@ public class AuthSessionDao {
     }
 
 
-    public void invalidate(UUID id) {
+    public String invalidate(UUID id) {
+        Optional<AuthSession> session = findById(id);
+
+        if (session.isEmpty()) return null;
+
+
         String sql = """
                     UPDATE auth_sessions
                     SET is_valid = FALSE, revoked_at = NOW()
@@ -86,7 +97,7 @@ public class AuthSessionDao {
 
             ps.setObject(1, id);
             ps.executeUpdate();
-
+            return session.get().getSessionToken();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
@@ -110,8 +121,28 @@ public class AuthSessionDao {
         }
     }
 
+    public String[] invalidateAllByCredId(UUID credId) {
+        List<AuthSession> sessions = findActiveSessionsByCred(credId);
 
-    public void delete(UUID id) {
+        if (sessions.isEmpty()) return null;
+
+        String[] sessionTokens = new String[sessions.size()];
+        for (int i = 0; i < sessions.size(); i++) {
+            sessionTokens[i] = sessions.get(i).getSessionToken();
+        }
+
+        String sql = "UPDATE auth_sessions SET is_valid = FALSE, revoked_at = NOW() WHERE cred_id = ?";
+        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql);) {
+            ps.setObject(1, credId);
+            ps.executeUpdate();
+            return sessionTokens;
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    private void delete(UUID id) {
         String sql = "DELETE FROM auth_sessions WHERE id = ?";
         try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
 
@@ -141,7 +172,7 @@ public class AuthSessionDao {
     private AuthSession mapRow(ResultSet rs) throws SQLException {
         AuthSession s = new AuthSession();
         s.setId((UUID) rs.getObject("id"));
-        s.setUserId((UUID) rs.getObject("user_id"));
+        s.setCredId((UUID) rs.getObject("cred_id"));
         s.setSessionToken(rs.getString("session_token"));
         s.setSessionMethod(rs.getString("session_method"));
         s.setIpAddress(rs.getString("ip_address"));
