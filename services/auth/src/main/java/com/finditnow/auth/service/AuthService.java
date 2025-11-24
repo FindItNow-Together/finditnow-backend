@@ -48,11 +48,11 @@ public class AuthService {
     public void signUp(HttpServerExchange exchange) throws Exception {
         Map<String, String> req = getRequestBody(exchange);
         String email = req.get("email");
-        String username = req.get("username");
+        String firstName = req.get("firstName");
         String phone = req.get("phone");
         String password = req.get("password");
 
-        if ((email == null && phone == null && username == null) || password == null) {
+        if ((email == null && phone == null) || password == null || firstName == null) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
             return;
