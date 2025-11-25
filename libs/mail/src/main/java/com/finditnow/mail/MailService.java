@@ -29,7 +29,10 @@ public class MailService {
 
             message.setContent(body, "text/html; charset=utf-8");
 
-            Transport.send(message);
+            if(!"development".equals(Config.get("ENVIRONMENT", "development"))){
+                Transport.send(message);
+            };
+
             System.out.println("Mail sent successfully to " + to);
 
         } catch (MessagingException e) {

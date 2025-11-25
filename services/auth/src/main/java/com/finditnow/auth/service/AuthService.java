@@ -6,6 +6,7 @@ import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
 import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
+import com.finditnow.config.Config;
 import com.finditnow.dispatcher.EmailDispatcher;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.mail.MailService;
@@ -79,10 +80,21 @@ public class AuthService {
 
         authDao.credDao.insert(cred);
 
-        sendVerificationEmail(email, credId.toString());
+        String emailOtp = sendVerificationEmail(email, credId.toString());
+
+        Map<String, String> resp = new HashMap<>();
+
+        resp.put("credId", credId.toString());
+        resp.put("message", "verification email sent");
+
+        resp.put("accessTokenValiditySeconds", "120");
+
+        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+            resp.put("emailOtp", emailOtp);
+        }
 
         exchange.setStatusCode(201);
-        exchange.getResponseSender().send("{\"message\":\"user_created\",\"credId\":\"" + credId + "\"}");
+        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
     public void verifyEmail(HttpServerExchange exchange) throws Exception {
@@ -133,7 +145,6 @@ public class AuthService {
             return;
         }
 
-
         AuthSession authSession = createSessionFromCred(cred);
 
         String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), "customer");
@@ -148,22 +159,16 @@ public class AuthService {
 
     public void resendVerificationEmail(HttpServerExchange exchange) throws Exception {
         Map<String, String> bodyMap = getRequestBody(exchange);
-        String email = bodyMap.get("email");
+        String credId = bodyMap.get("credId");
 
         //email is required for sending verification email
-        if (email == null || email.isEmpty()) {
+        if (credId == null || credId.isEmpty()) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
             return;
         }
 
-        if (!email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
-            return;
-        }
-
-        Optional<AuthCredential> cred = authDao.credDao.findByEmail(email);
+        Optional<AuthCredential> cred = authDao.credDao.findById(UUID.fromString(credId));
 
         if (cred.isEmpty()) {
             exchange.setStatusCode(400);
@@ -171,22 +176,31 @@ public class AuthService {
             return;
         }
 
-        String credId = cred.get().getId().toString();
+        String email = cred.get().getEmail();
 
-        sendVerificationEmail(email, credId);
+        String emailOtp = sendVerificationEmail(email, credId);
 
+        Map<String, String> resp = new HashMap<>();
+
+        resp.put("message", "verification email sent");
+        resp.put("accessTokenValiditySeconds", "120");
+
+        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+            resp.put("emailOtp", emailOtp);
+        }
         exchange.setStatusCode(201);
-        exchange.getResponseSender().send("{\"message\":\"verification email resent\"");
+        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
-    private void sendVerificationEmail(String email, String credId) {
+    private String sendVerificationEmail(String email, String credId) {
         String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-//        mailer.send(email, "FindItNow: Email Verification", String
-//                .format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
-//                        emailOtp), true);
+        mailer.send(email, "FindItNow: Email Verification", String
+                .format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        emailOtp), true);
 
-        redis.setKey("emailOtp:" + credId, String.valueOf(emailOtp), 2 * 60L);
+        redis.setKey("emailOtp:" + credId, emailOtp, 2 * 60L);
+        return emailOtp;
     }
 
     public void sendResetPwdToken(HttpServerExchange exchange) throws Exception {
