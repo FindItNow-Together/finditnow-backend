@@ -153,12 +153,19 @@ public class AuthService {
 
         Map<String, String> resp = new HashMap<>();
         resp.put("access_token", accessToken);
-        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
+
+        String refreshTokenCookieType = ";Secure; Path=/refresh; HttpOnly; SameSite=None";
+        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+            refreshTokenCookieType = "; Path=/refresh; HttpOnly; SameSite=None";
+        }
+
+        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + refreshTokenCookieType);
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
     public void resendVerificationEmail(HttpServerExchange exchange) throws Exception {
         Map<String, String> bodyMap = getRequestBody(exchange);
+
         String credId = bodyMap.get("credId");
 
         //email is required for sending verification email
@@ -382,7 +389,12 @@ public class AuthService {
         Map<String, String> resp = new HashMap<>();
 
         resp.put("access_token", accessToken);
-        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + ";Secure; Path=/refresh; HttpOnly; SameSite=Strict");
+        String refreshTokenCookieType = ";Secure; Path=/refresh; HttpOnly; SameSite=None";
+        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+            refreshTokenCookieType = "; Path=/refresh; HttpOnly; SameSite=None";
+        }
+
+        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + refreshTokenCookieType);
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
