@@ -35,7 +35,7 @@ public class AuthCredentialDao {
     }
 
     public Optional<AuthCredential> findByIdentifier(String identifier) throws SQLException {
-        String findQuery = "SELECT id, email, phone, password_hash FROM users WHERE email = ? OR phone = ? LIMIT 1";
+        String findQuery = "SELECT * FROM auth_credentials WHERE email = ? OR phone = ? LIMIT 1";
 
         try (Connection conn = dataSource.getConnection();) {
             PreparedStatement stmt = conn.prepareStatement(findQuery);

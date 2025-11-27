@@ -1,6 +1,7 @@
 package com.finditnow.auth.server;
 
 import com.finditnow.auth.handlers.AuthHandler;
+import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.service.OAuthService;
 import com.finditnow.config.Config;
@@ -13,10 +14,11 @@ import org.slf4j.LoggerFactory;
 public class HTTPServer {
     private static final Logger logger = LoggerFactory.getLogger(HTTPServer.class);
     private final int httpPort = Integer.parseInt(Config.get("HTTPPort", "8080"));
-    private final AuthHandler authHandler;
+    //    private final AuthHandler authHandler;
+    private final PathHandler pathHandler;
 
     public HTTPServer(AuthService usrService, OAuthService oauth) {
-        authHandler = new AuthHandler(usrService, oauth);
+        pathHandler = new PathHandler(new AuthHandler(usrService, oauth));
     }
 
     public void start() {
@@ -24,7 +26,7 @@ public class HTTPServer {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
             try {
-                authHandler.route(exchange);
+                pathHandler.verifyPath(exchange);
             } catch (Exception e) {
                 logger.error("Unhandled exception in HTTP handler", e);
                 exchange.setStatusCode(500);

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dao.AuthDao;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
+import com.finditnow.auth.utils.Logger;
 import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
 import com.finditnow.config.Config;
@@ -17,27 +18,26 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.util.Headers;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import io.undertow.server.handlers.CookieImpl;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 public class AuthService {
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    private static final Logger logger = Logger.getLogger(AuthService.class);
     private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
     private final ObjectMapper mapper = new ObjectMapper();
     private final AuthDao authDao;
     private final RedisStore redis;
     private final JwtService jwt;
+
+    private final long refreshTokenMaxLifeSeconds = Duration.ofDays(7).toSeconds();
 
     public AuthService(AuthDao authDao, RedisStore redis, JwtService jwt) {
         this.authDao = authDao;
@@ -59,9 +59,20 @@ public class AuthService {
             return;
         }
 
-        if (email != null && authDao.credDao.findByEmail(email).isPresent()) {
+        Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
+
+        if (email != null && authCred.isPresent()) {
             exchange.setStatusCode(409);
-            exchange.getResponseSender().send("{\"error\":\"user_exists\"}");
+            if (authCred.get().isEmailVerified()) {
+                exchange.getResponseSender().send("{\"error\":\"user_verified\"}");
+            } else {
+                Map<String, String> res = new HashMap<>();
+                res.put("error", "account_not_verified");
+                res.put("credId", authCred.get().getId().toString());
+                exchange.setStatusCode(400);
+                exchange.getResponseSender().send(mapper.writeValueAsString(res));
+            }
+
             return;
         }
 
@@ -113,13 +124,13 @@ public class AuthService {
 
         if (storedOtp == null) {
             exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"otp not found\"}");
+            exchange.getResponseSender().send("{\"error\":\"otp_not_found\"}");
             return;
         }
 
         if (!storedOtp.equals(verificationOtp)) {
             exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"invalid otp\"}");
+            exchange.getResponseSender().send("{\"error\":\"invalid_otp\"}");
             return;
         }
 
@@ -135,9 +146,8 @@ public class AuthService {
 
         UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
 
-        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail("abc@Gmail.com").setName("pqr_123").build());
-
-        System.out.println("GRPC RESPONSE -> " + res);
+        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder()
+                .setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName("User").build());
 
         if (!res.hasUser()) {
             exchange.setStatusCode(500);
@@ -152,14 +162,9 @@ public class AuthService {
         addSessionToRedis(authSession);
 
         Map<String, String> resp = new HashMap<>();
-        resp.put("access_token", accessToken);
+        resp.put("accessToken", accessToken);
 
-        String refreshTokenCookieType = ";Secure; Path=/refresh; HttpOnly; SameSite=None";
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            refreshTokenCookieType = "; Path=/refresh; HttpOnly; SameSite=None";
-        }
-
-        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + refreshTokenCookieType);
+        setRefreshCookie(exchange, authSession.getSessionToken(), false);
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
@@ -175,15 +180,23 @@ public class AuthService {
             return;
         }
 
-        Optional<AuthCredential> cred = authDao.credDao.findById(UUID.fromString(credId));
+        Optional<AuthCredential> authCred = authDao.credDao.findById(UUID.fromString(credId));
 
-        if (cred.isEmpty()) {
+        if (authCred.isEmpty()) {
             exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"email not registered\"}");
+            exchange.getResponseSender().send("{\"error\":\"email_not_registered\"}");
             return;
         }
 
-        String email = cred.get().getEmail();
+        AuthCredential cred = authCred.get();
+
+        if (cred.isEmailVerified()) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("{\"error\":\"email_verified\"}");
+            return;
+        }
+
+        String email = cred.getEmail();
 
         String emailOtp = sendVerificationEmail(email, credId);
 
@@ -321,7 +334,7 @@ public class AuthService {
 
         Map<String, Object> updateFields = new HashMap<>();
 
-        updateFields.put("password_hash", password);
+        updateFields.put("password_hash", PasswordUtil.hash(password));
         authDao.credDao.updateCredFieldsById(cred.getId(), updateFields);
 
         redis.deleteKey("resetAllowed:" + email);
@@ -362,9 +375,9 @@ public class AuthService {
     // signin using email or phone or username + password
     public void signIn(HttpServerExchange exchange) throws Exception {
         Map<String, String> req = getRequestBody(exchange);
-        String identifier = req.get("identifier"); // email or phone or username
+        String identifier = req.get("email"); // email or phone or username
         String password = req.get("password");
-        String authProfile = req.getOrDefault("auth_profile", "customer");
+        String authProfile = req.getOrDefault("authProfile", "customer");
 
         if (identifier == null || password == null) {
             exchange.setStatusCode(400);
@@ -373,13 +386,28 @@ public class AuthService {
         }
 
         Optional<AuthCredential> authCred = authDao.credDao.findByIdentifier(identifier);
-        if (authCred.isEmpty() || !PasswordUtil.verifyPassword(password, authCred.get().getPasswordHash())) {
+        if (authCred.isEmpty()) {
             exchange.setStatusCode(401);
             exchange.getResponseSender().send("{\"error\":\"invalid_credentials\"}");
             return;
         }
 
         AuthCredential cred = authCred.get();
+
+        if (!cred.isEmailVerified() && !cred.isPhoneVerified()) {
+            Map<String, String> res = new HashMap<>();
+            res.put("error", "account_not_verified");
+            res.put("credId", cred.getId().toString());
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send(mapper.writeValueAsString(res));
+            return;
+        }
+
+        if (!PasswordUtil.verifyPassword(password, cred.getPasswordHash())) {
+            exchange.setStatusCode(401);
+            exchange.getResponseSender().send("{\"error\":\"invalid_credentials\"}");
+            return;
+        }
 
         AuthSession authSession = createSessionFromCred(cred);
 
@@ -388,13 +416,10 @@ public class AuthService {
 
         Map<String, String> resp = new HashMap<>();
 
-        resp.put("access_token", accessToken);
-        String refreshTokenCookieType = ";Secure; Path=/refresh; HttpOnly; SameSite=None";
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            refreshTokenCookieType = "; Path=/refresh; HttpOnly; SameSite=None";
-        }
+        resp.put("accessToken", accessToken);
 
-        exchange.getResponseHeaders().put(Headers.SET_COOKIE, "refresh_token=" + authSession.getSessionToken() + refreshTokenCookieType);
+        setRefreshCookie(exchange, authSession.getSessionToken(), false);
+
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
@@ -437,16 +462,37 @@ public class AuthService {
             }
         } catch (Exception e) {
             // Log error but don't fail logout if token blacklisting fails
-            logger.warn("Failed to blacklist access token during logout", e);
+            logger.getCore().warn("Failed to blacklist access token during logout", e);
         }
 
+        setRefreshCookie(exchange, "", true);
         exchange.getResponseSender().send("{\"message\":\"logged out successfully\"}");
     }
 
-    public AuthSession createSessionFromCred(AuthCredential cred) {
-        long refreshTtlMs = Duration.ofDays(7).toMillis();
+    private void setRefreshCookie(HttpServerExchange exchange, String token, boolean isExpired) throws IOException {
+        CookieImpl cookie = new CookieImpl("refresh_token", token);
+        cookie.setHttpOnly(true);
 
-        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), "password", OffsetDateTime.now().plus(refreshTtlMs, ChronoUnit.MILLIS));
+        if (isExpired) {
+            cookie.setMaxAge(0);
+        } else {
+            cookie.setMaxAge(((int) refreshTokenMaxLifeSeconds));
+        }
+
+        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+            cookie.setSameSiteMode("Lax");
+            cookie.setPath("/");
+        } else {
+            cookie.setSameSiteMode("None");
+            cookie.setPath("/refresh");
+            cookie.setSecure(true);
+        }
+
+        exchange.setResponseCookie(cookie);
+    }
+
+    public AuthSession createSessionFromCred(AuthCredential cred) {
+        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), "password", OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
 
         authDao.sessionDao.insert(authSession);
 
@@ -481,7 +527,7 @@ public class AuthService {
         }
 
         String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"), info.get("profile"));
-        exchange.getResponseSender().send(mapper.writeValueAsString(Map.of("access_token", newAccess)));
+        exchange.getResponseSender().send(mapper.writeValueAsString(Map.of("accessToken", newAccess)));
     }
 
     // used by OAuth service to find or create user by email
