@@ -73,8 +73,15 @@ public class JwtService {
         userInfo.put("credId", claims.getPayload().get("credId", String.class));
         userInfo.put("userId", claims.getPayload().get("userId", String.class));
         userInfo.put("profile", claims.getPayload().get("profile", String.class));
+        userInfo.put("isSessionExpired", String.valueOf(claims.getPayload().getExpiration().before(new Date())));
 
         return userInfo;
+    }
+
+    public boolean isTokenExpired(String token) {
+        Jws<Claims> claims = parseClaims(token);
+
+        return claims.getPayload().getExpiration().before(new Date());
     }
 
     /**

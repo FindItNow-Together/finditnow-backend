@@ -26,7 +26,7 @@ public class HTTPServer {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
             try {
-                pathHandler.verifyPath(exchange);
+                pathHandler.route(exchange);
             } catch (Exception e) {
                 logger.error("Unhandled exception in HTTP handler", e);
                 exchange.setStatusCode(500);

@@ -1,16 +1,24 @@
 package com.finditnow.auth.handlers;
 
 import com.finditnow.auth.utils.Logger;
+import com.finditnow.jwt.JwtService;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 public class PathHandler {
     private static final Logger logger = Logger.getLogger(PathHandler.class);
     private static final Map<String, String> routeMap = new HashMap<>();
+    private static final Set<String> privateRoutes = new HashSet<>();
     public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
+    public static final AttachmentKey<String> AUTH_TOKEN = AttachmentKey.create(String.class);
+    public static final AttachmentKey<Map<String, String>> SESSION_INFO = AttachmentKey.create(Map.class);
+
+    private static final JwtService jwt = new JwtService();
 
     static {
         routeMap.put("/signin", "POST");
@@ -27,13 +35,18 @@ public class PathHandler {
         routeMap.put("/health", "GET");
     }
 
+    static {
+        privateRoutes.add("/updatepassword");
+        privateRoutes.add("/logout");
+    }
+
     private final AuthHandler nextHandler;
 
     public PathHandler(AuthHandler nextHandler) {
         this.nextHandler = nextHandler;
     }
 
-    public void verifyPath(HttpServerExchange exchange) throws Exception {
+    public void route(HttpServerExchange exchange) throws Exception {
         if (exchange.isInIoThread()) {
             // Track request start time early
             long startTime = System.nanoTime();
@@ -41,7 +54,7 @@ public class PathHandler {
 
             exchange.dispatch(() -> {
                 try {
-                    verifyPath(exchange);
+                    route(exchange);
                 } catch (Exception e) {
                     Long start = exchange.getAttachment(REQUEST_START_TIME_KEY);
                     long executionTimeMs = 0;
@@ -86,6 +99,35 @@ public class PathHandler {
             return;
         }
 
+        if (privateRoutes.contains(route)) {
+            String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                exchange.setStatusCode(401);
+                exchange.getResponseSender().send("{\"error\":\"unauthorized\"}");
+                return;
+            }
+
+            String token = authHeader.substring(7);
+
+            try {
+                Map<String, String> sessionInfo = jwt.parseTokenToUser(token);
+
+                if (sessionInfo == null || sessionInfo.get("isSessionExpired").equals("true")) {
+                    exchange.setStatusCode(401);
+                    exchange.getResponseSender().send("{\"error\":\"token_expired\"}");
+                    return;
+                }
+
+                exchange.putAttachment(SESSION_INFO, sessionInfo);
+            } catch (Exception e) {
+                exchange.setStatusCode(401);
+                exchange.getResponseSender().send("{\"error\":\"unauthorized\"}");
+                return;
+            }
+
+            exchange.putAttachment(AUTH_TOKEN, token);
+        }
 
         nextHandler.route(exchange);
     }

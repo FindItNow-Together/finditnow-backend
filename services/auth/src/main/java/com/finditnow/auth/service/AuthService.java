@@ -2,6 +2,7 @@ package com.finditnow.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dao.AuthDao;
+import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
 import com.finditnow.auth.utils.Logger;
@@ -343,12 +344,6 @@ public class AuthService {
     }
 
     public void updatePassword(HttpServerExchange exchange) throws Exception {
-        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
-            return;
-        }
         Map<String, String> bodyMap = getRequestBody(exchange);
 
         String newPassword;
@@ -364,8 +359,7 @@ public class AuthService {
             return;
         }
 
-        Map<String, String> authInfo = jwt.parseTokenToUser(authHeader.substring(7));
-
+        Map<String, String> authInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
 
         Map<String, Object> updateFields = new HashMap<>();
         updateFields.put("password_hash", newPassword);
@@ -430,25 +424,8 @@ public class AuthService {
     }
 
     public void logout(HttpServerExchange exchange) throws Exception {
-        String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
-
-        if (authHeader == null || authHeader.isEmpty()) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
-            return;
-        }
-
-        String accessToken;
-
-        try {
-            accessToken = authHeader.substring(7);
-        } catch (Exception e) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"request unauthorized\"}");
-            return;
-        }
-
-        Map<String, String> tokenUserInfo = jwt.parseTokenToUser(accessToken);
+        String accessToken = exchange.getAttachment(PathHandler.AUTH_TOKEN);
+        Map<String, String> tokenUserInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
 
         // Delete refresh token from DB and Redis
         String dbRefreshToken = authDao.sessionDao.invalidate(UUID.fromString(tokenUserInfo.get("sessionId")));
