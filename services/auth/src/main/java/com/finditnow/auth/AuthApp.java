@@ -20,7 +20,7 @@ public class AuthApp {
     public static void main(String[] args) {
 
         try {
-            DataSource ds = new Database().get();
+            DataSource ds = new Database("auth_service").get();
             DatabaseMigrations.migrate(ds);
             RedisStore redis = RedisStore.getInstance();
             JwtService jwt = new JwtService();

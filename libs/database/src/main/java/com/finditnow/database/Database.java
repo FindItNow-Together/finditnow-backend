@@ -12,22 +12,19 @@ import java.util.TimeZone;
 
 public class Database {
     private static final Logger logger = LoggerFactory.getLogger(Database.class);
-    private HikariDataSource dataSource;
+    private final HikariDataSource dataSource;
 
-    public Database() {
-
-
+    public Database(String serviceName) {
+        if (serviceName == null || serviceName.isEmpty()) {
+            throw new IllegalArgumentException("serviceName:dbName cannot be null or empty");
+        }
         HikariConfig dbConfig = new HikariConfig();
+        dbConfig.setJdbcUrl("jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":" + Config.get("DB_PORT", "5432") + "/" + serviceName);
 
-
-        dbConfig.setJdbcUrl(
-                Config.get("JDBC_DATABASE_URL",
-                        "DB_URL"));
-
-        dbConfig.setUsername(Config.get("DATABASE_USER", "root"));
-        dbConfig.setPassword(Config.get("DATABASE_USER_PWD", "root@123"));
-        dbConfig.setMaximumPoolSize(Integer.parseInt(Config.get("DATABASE_POOL_SIZE", "5")));
-        TimeZone.setDefault(TimeZone.getTimeZone(Config.get("DATABASE_TIMEZONE", "UTC")));
+        dbConfig.setUsername(Config.get("DB_USER", "devuser"));
+        dbConfig.setPassword(Config.get("DB_PASSWORD", "dev@123"));
+        dbConfig.setMaximumPoolSize(Integer.parseInt(Config.get("DB_POOL_SIZE", "5")));
+        TimeZone.setDefault(TimeZone.getTimeZone(Config.get("DB_TIMEZONE", "Asia/Kolkata")));
 
         dataSource = new HikariDataSource(dbConfig);
 

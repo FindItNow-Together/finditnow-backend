@@ -1,0 +1,84 @@
+WRITE-HOST "*****finditnow:setup-run*****"
+
+$ScriptPath = $MyInvocation.MyCommand.Path
+$ROOT_DIR = Split-Path -Parent (Resolve-Path $ScriptPath)
+$INFRA_DIR = "$ROOT_DIR\infra"
+$DATA_DIR = "$INFRA_DIR\data"
+
+# Load .env
+$EnvFile = "$ROOT_DIR\.env"
+
+Write-Host "TEST_FILE: $EnvFile"
+Write-Host "Test-Path says: $( Test-Path $EnvFile )"
+
+if (Test-Path $EnvFile)
+{
+    Write-Host "> Loading root .env"
+    Get-Content $EnvFile | ForEach-Object {
+        if ($_ -match "^\s*#")
+        {
+            return
+        }
+        if ($_ -match "^\s*$")
+        {
+            return
+        }
+        $parts = $_.Split("=", 2)
+        $name = $parts[0].Trim()
+        $value = $parts[1].Trim()
+        Set-Item -Path env:$name -Value $value
+    }
+}
+
+Write-Host ">>>Ensuring container persistence volume"
+New-Item -ItemType Directory -Force -Path "$DATA_DIR\postgres" | Out-Null
+New-Item -ItemType Directory -Force -Path "$DATA_DIR\redis" | Out-Null
+
+Write-Host ">>>Starting infra containers"
+cd $INFRA_DIR
+
+docker compose up -d
+
+Write-Host ">>>Waiting for postgres"
+for ($i = 0; $i -lt 20; $i++) {
+    $pg = docker compose ps -q finditnow-postgres
+    $ready = docker exec $pg pg_isready -U $env:DB_USER 2> $null
+    if ($LASTEXITCODE -eq 0)
+    {
+        break
+    }
+    Start-Sleep -Seconds 1
+}
+
+if ($LASTEXITCODE -ne 0)
+{
+    Write-Host "!! Postgres timeout"; exit 1
+}
+
+# Wait for Redis
+Write-Host ">>>Waiting for Redis..."
+for ($i = 0; $i -lt 20; $i++) {
+    $rd = docker compose ps -q finditnow-redis
+    $ping = docker exec $rd redis-cli ping 2> $null
+    if ($ping -eq "PONG")
+    {
+        break
+    }
+    Start-Sleep -Seconds 1
+}
+if ($ping -ne "PONG")
+{
+    Write-Host "!! Redis timeout"; exit 1
+}
+
+# --- RUN MICROSERVICES (Windows style — new CMD windows) ---
+Write-Host ">>>Starting microservices in new CMD windows..."
+
+cd $ROOT_DIR
+
+Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:auth:run"
+Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:user-service:bootRun"
+
+Write-Host ">>>Opened windows for both services."
+Write-Host ""
+Write-Host "===[ Everything running ]==="

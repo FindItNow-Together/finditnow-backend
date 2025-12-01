@@ -1,0 +1,22 @@
+services:
+  finditnow-postgres:
+    image: postgres:15.15
+    container_name: finditnow-postgres
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      - POSTGRES_USER=${DB_USER:-devuser}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-dev@123}
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./data/postgres:/var/lib/postgresql/data"
+
+  finditnow-redis:
+    image: redis:8.4.0
+    restart: unless-stopped
+    volumes:
+      - ./data/redis:/data
+    ports:
+      - "6379:6379"
