@@ -15,7 +15,7 @@ repositories {
 }
 
 dependencies {
-    implementation(project(":libs:config"))
+    implementation(project(":libs:database"))
     implementation(project(":libs:jwt"))
     implementation(project(":libs:redis"))
     implementation(project(":libs:proto"))//grpc

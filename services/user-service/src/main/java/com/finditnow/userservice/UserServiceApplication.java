@@ -1,6 +1,6 @@
 package com.finditnow.userservice;
 
-import com.finditnow.userservice.config.EnvBootstrap;
+import com.finditnow.database.Database;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class UserServiceApplication {
 
     public static void main(String[] args) {
-        EnvBootstrap.setEnv();
+        Database.setEnv("user_service");
 
         SpringApplication.run(UserServiceApplication.class, args);
     }

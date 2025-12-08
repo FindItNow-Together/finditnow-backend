@@ -36,3 +36,4 @@ include("services:user-service")
 
 include("libs:dispatcher")
 include("libs:proto")
+include("services:shop-service")
