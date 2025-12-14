@@ -53,11 +53,16 @@ public class AuthService {
         String firstName = req.get("firstName");
         String phone = req.get("phone");
         String password = req.get("password");
+        String role = req.get("role");
 
         if ((email == null && phone == null) || password == null || firstName == null) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
             return;
+        }
+
+        if (role == null) {
+            role = "customer";
         }
 
         Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
@@ -88,7 +93,7 @@ public class AuthService {
 
         String pwHash = PasswordUtil.hash(password);
 
-        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, false, false, OffsetDateTime.now());
+        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false, OffsetDateTime.now());
 
         authDao.credDao.insert(cred);
 
@@ -147,8 +152,7 @@ public class AuthService {
 
         UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
 
-        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder()
-                .setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName("User").build());
+        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName("User").build());
 
         if (!res.hasUser()) {
             exchange.setStatusCode(500);
@@ -160,10 +164,11 @@ public class AuthService {
 
         String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), "customer");
 
-        addSessionToRedis(authSession);
+        addSessionToRedis(authSession, cred.getRole().toString());
 
         Map<String, String> resp = new HashMap<>();
         resp.put("accessToken", accessToken);
+        resp.put("profile", cred.getRole().toString());
 
         setRefreshCookie(exchange, authSession.getSessionToken(), false);
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
@@ -216,9 +221,7 @@ public class AuthService {
     private String sendVerificationEmail(String email, String credId) {
         String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-        mailer.send(email, "FindItNow: Email Verification", String
-                .format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
-                        emailOtp), true);
+        mailer.send(email, "FindItNow: Email Verification", String.format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>", emailOtp), true);
 
         redis.setKey("emailOtp:" + credId, emailOtp, 2 * 60L);
         return emailOtp;
@@ -371,7 +374,6 @@ public class AuthService {
         Map<String, String> req = getRequestBody(exchange);
         String identifier = req.get("email"); // email or phone or username
         String password = req.get("password");
-        String authProfile = req.getOrDefault("authProfile", "customer");
 
         if (identifier == null || password == null) {
             exchange.setStatusCode(400);
@@ -405,12 +407,13 @@ public class AuthService {
 
         AuthSession authSession = createSessionFromCred(cred);
 
-        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), "customer");
-        addSessionToRedis(authSession);
+        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
+        addSessionToRedis(authSession, cred.getRole().toString());
 
         Map<String, String> resp = new HashMap<>();
 
         resp.put("accessToken", accessToken);
+        resp.put("profile", cred.getRole().toString());
 
         setRefreshCookie(exchange, authSession.getSessionToken(), false);
 
@@ -426,10 +429,26 @@ public class AuthService {
     public void logout(HttpServerExchange exchange) throws Exception {
         String accessToken = exchange.getAttachment(PathHandler.AUTH_TOKEN);
         Map<String, String> tokenUserInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
+        String refreshToken = null;
+        if (accessToken == null) {
+            Cookie refreshCookie = exchange.getRequestCookie("refresh_token");
+
+            if (refreshCookie == null) {
+                exchange.setStatusCode(200);
+                exchange.getResponseSender().send("{\"message\":\"already logged out\"}");
+                return;
+            }
+
+            refreshToken = refreshCookie.getValue();
+
+            authDao.sessionDao.invalidateByToken(refreshToken);
+        } else {
+            refreshToken = authDao.sessionDao.invalidate(UUID.fromString(tokenUserInfo.get("sessionId")));
+        }
 
         // Delete refresh token from DB and Redis
-        String dbRefreshToken = authDao.sessionDao.invalidate(UUID.fromString(tokenUserInfo.get("sessionId")));
-        redis.deleteRefreshToken(dbRefreshToken);
+
+        redis.deleteRefreshToken(refreshToken);
 
         // Blacklist the access token if provided
         try {
@@ -477,9 +496,9 @@ public class AuthService {
     }
 
     // create server session: stores session in DB and Redis
-    void addSessionToRedis(AuthSession authSession) throws Exception {
+    void addSessionToRedis(AuthSession authSession, String role) throws Exception {
         // store in Redis: key refresh:<token> -> userId|profile
-        redis.putRefreshToken(authSession.getSessionToken(), authSession.getCredId().toString(), "customer", Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
+        redis.putRefreshToken(authSession.getSessionToken(), authSession.getCredId().toString(), role, Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
     }
 
     // refresh access token flow

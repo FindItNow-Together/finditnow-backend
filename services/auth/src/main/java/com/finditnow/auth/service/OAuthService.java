@@ -41,13 +41,13 @@ public class OAuthService {
 
         AuthCredential cred = authService.findOrCreateUserByEmail(email);
 
-        String profile = req.getOrDefault("auth_profile", "customer").toString();
+        String profile = req.getOrDefault("auth_profile", cred.getRole().toString()).toString();
 
         AuthSession authSession = authService.createSessionFromCred(cred);
 
         String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
-                cred.getUserId().toString(), "customer");
-        authService.addSessionToRedis(authSession);
+                cred.getUserId().toString(), cred.getRole().toString());
+        authService.addSessionToRedis(authSession, cred.getRole().toString());
 
         exchange.getResponseSender()
                 .send("{\"access_token\":\"" + accessToken + "\",\"refresh_token\":\"" + authSession.getSessionToken() + "\"}");

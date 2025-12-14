@@ -1,5 +1,7 @@
 package com.finditnow.auth.model;
 
+import com.finditnow.auth.types.Role;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -15,6 +17,7 @@ import java.util.UUID;
  * created_at TIMESTAMPTZ DEFAULT NOW()
  * );
  */
+
 public class AuthCredential {
     private UUID id;
     private UUID userId;
@@ -25,14 +28,16 @@ public class AuthCredential {
     private boolean isPhoneVerified;
     private OffsetDateTime createdAt;
 
+    private Role role = Role.CUSTOMER;
+
     public AuthCredential() {
     }
 
-    public AuthCredential(UUID id, UUID userId, String email, String phone, String passwordHash) {
-        this(id, userId, email, phone, passwordHash, false, false, OffsetDateTime.now());
+    public AuthCredential(UUID id, UUID userId, String email, String phone, String passwordHash, String userRole) {
+        this(id, userId, email, phone, passwordHash, userRole, false, false, OffsetDateTime.now());
     }
 
-    public AuthCredential(UUID id, UUID userId, String email, String phone, String passwordHash, boolean isEmailVerified, boolean isPhoneVerified, OffsetDateTime createdAt) {
+    public AuthCredential(UUID id, UUID userId, String email, String phone, String passwordHash, String userRole, boolean isEmailVerified, boolean isPhoneVerified, OffsetDateTime createdAt) {
         this.id = id;
         this.userId = userId;
         this.email = email;
@@ -41,6 +46,7 @@ public class AuthCredential {
         this.isEmailVerified = isEmailVerified;
         this.isPhoneVerified = isPhoneVerified;
         this.createdAt = createdAt;
+        this.role = Role.valueOf(userRole.toUpperCase());
     }
 
     public UUID getId() {
@@ -105,5 +111,13 @@ public class AuthCredential {
 
     public void setCreatedAt(OffsetDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

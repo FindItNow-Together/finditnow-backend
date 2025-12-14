@@ -38,7 +38,6 @@ public class PathHandler implements HttpHandler {
 
     static {
         privateRoutes.add("/updatepassword");
-        privateRoutes.add("/logout");
     }
 
     private final RouteHandler nextHandler;
@@ -101,6 +100,8 @@ public class PathHandler implements HttpHandler {
             return;
         }
 
+        String token = null;
+        Map<String, String> sessionInfo = null;
         if (privateRoutes.contains(route)) {
             String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
@@ -110,10 +111,10 @@ public class PathHandler implements HttpHandler {
                 return;
             }
 
-            String token = authHeader.substring(7);
+            token = authHeader.substring(7);
 
             try {
-                Map<String, String> sessionInfo = jwt.parseTokenToUser(token);
+                sessionInfo = jwt.parseTokenToUser(token);
 
                 if (sessionInfo == null || sessionInfo.get("isSessionExpired").equals("true")) {
                     exchange.setStatusCode(401);
@@ -121,13 +122,18 @@ public class PathHandler implements HttpHandler {
                     return;
                 }
 
-                exchange.putAttachment(SESSION_INFO, sessionInfo);
+
             } catch (Exception e) {
                 exchange.setStatusCode(401);
                 exchange.getResponseSender().send("{\"error\":\"unauthorized\"}");
                 return;
             }
 
+
+        }
+
+        if (sessionInfo != null) {
+            exchange.putAttachment(SESSION_INFO, sessionInfo);
             exchange.putAttachment(AUTH_TOKEN, token);
         }
 
