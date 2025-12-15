@@ -2,7 +2,6 @@ package com.finditnow.shopservice.controller;
 
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
-import com.finditnow.shopservice.security.JwtUtil;
 import com.finditnow.shopservice.service.ShopService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

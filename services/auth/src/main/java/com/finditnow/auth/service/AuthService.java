@@ -94,7 +94,7 @@ public class AuthService {
         String pwHash = PasswordUtil.hash(password);
 
         AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false, OffsetDateTime.now());
-
+        cred.setFirstName(firstName);
         authDao.credDao.insert(cred);
 
         String emailOtp = sendVerificationEmail(email, credId.toString());
@@ -169,6 +169,7 @@ public class AuthService {
         Map<String, String> resp = new HashMap<>();
         resp.put("accessToken", accessToken);
         resp.put("profile", cred.getRole().toString());
+        resp.put("firstName", cred.getFirstName());
 
         setRefreshCookie(exchange, authSession.getSessionToken(), false);
         exchange.getResponseSender().send(mapper.writeValueAsString(resp));
@@ -414,6 +415,7 @@ public class AuthService {
 
         resp.put("accessToken", accessToken);
         resp.put("profile", cred.getRole().toString());
+        resp.put("firstName", cred.getFirstName());
 
         setRefreshCookie(exchange, authSession.getSessionToken(), false);
 

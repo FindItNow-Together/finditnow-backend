@@ -22,6 +22,7 @@ public class AuthCredential {
     private UUID id;
     private UUID userId;
     private String email;
+    private String firstName;
     private String phone;
     private transient String passwordHash;
     private boolean isEmailVerified;
@@ -119,5 +120,13 @@ public class AuthCredential {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
     }
 }

@@ -1,12 +1,10 @@
 package com.finditnow.auth.dao;
 
 import com.finditnow.auth.model.AuthCredential;
+import com.finditnow.auth.types.Role;
 
 import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,8 +53,8 @@ public class AuthCredentialDao {
     public void insert(AuthCredential c) {
         String sql = """
                     INSERT INTO auth_credentials
-                    (id, user_id, email, phone, password_hash, is_email_verified, is_phone_verified, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                    (id, user_id, email, first_name, phone, password_hash,role, is_email_verified, is_phone_verified, created_at)
+                    VALUES (?, ?,?, ?, ?,?, ?, ?, ?, NOW())
                 """;
 
         try (Connection conn = dataSource.getConnection();
@@ -65,10 +63,12 @@ public class AuthCredentialDao {
             ps.setObject(1, c.getId());
             ps.setObject(2, c.getUserId());
             ps.setString(3, c.getEmail());
-            ps.setString(4, c.getPhone());
-            ps.setString(5, c.getPasswordHash());
-            ps.setBoolean(6, c.isEmailVerified());
-            ps.setBoolean(7, c.isPhoneVerified());
+            ps.setString(4, c.getFirstName());
+            ps.setString(5, c.getPhone());
+            ps.setString(6, c.getPasswordHash());
+            ps.setObject(7, c.getRole().toDb(), Types.OTHER);
+            ps.setBoolean(8, c.isEmailVerified());
+            ps.setBoolean(9, c.isPhoneVerified());
 
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -160,8 +160,10 @@ public class AuthCredentialDao {
         c.setId((UUID) rs.getObject("id"));
         c.setUserId((UUID) rs.getObject("user_id"));
         c.setEmail(rs.getString("email"));
+        c.setFirstName(rs.getString("first_name"));
         c.setPhone(rs.getString("phone"));
         c.setPasswordHash(rs.getString("password_hash"));
+        c.setRole(Role.fromDb(rs.getString("role")));
         c.setEmailVerified(rs.getBoolean("is_email_verified"));
         c.setPhoneVerified(rs.getBoolean("is_phone_verified"));
         c.setCreatedAt(rs.getObject("created_at", java.time.OffsetDateTime.class));

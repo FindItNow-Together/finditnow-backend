@@ -1,7 +1,7 @@
 package com.finditnow.shopservice.controller;
 
+import com.finditnow.jwt.JwtService;
 import com.finditnow.shopservice.exception.UnauthorizedException;
-import com.finditnow.shopservice.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 
@@ -12,7 +12,7 @@ import org.springframework.security.core.Authentication;
 @RequiredArgsConstructor
 public abstract class BaseController {
 
-    protected final JwtUtil jwtUtil;
+    protected final JwtService jwtUtil;
 
     /**
      * Helper method to extract user ID from authentication token.
