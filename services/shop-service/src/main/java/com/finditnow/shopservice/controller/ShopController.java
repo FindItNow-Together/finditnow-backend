@@ -1,18 +1,28 @@
 package com.finditnow.shopservice.controller;
 
-import com.finditnow.shopservice.dto.ShopRequest;
-import com.finditnow.shopservice.dto.ShopResponse;
-import com.finditnow.shopservice.service.ShopService;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotEmpty;
-import jakarta.validation.constraints.NotNull;
+import java.util.List;
+import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import com.finditnow.shopservice.dto.ShopRequest;
+import com.finditnow.shopservice.dto.ShopResponse;
+import com.finditnow.shopservice.service.ShopService;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 @RestController
 @RequestMapping("/api/v1/shops")
@@ -21,8 +31,7 @@ public class ShopController extends BaseController {
 
     private final ShopService shopService;
 
-    public ShopController(JwtUtil jwtUtil, ShopService shopService) {
-        super(jwtUtil);
+    public ShopController(ShopService shopService) {
         this.shopService = shopService;
     }
 
@@ -32,13 +41,13 @@ public class ShopController extends BaseController {
             @Valid @RequestBody ShopRequest request,
             Authentication authentication) {
 
-        Long userId = extractUserId(authentication);
+        UUID userId = extractUserId(authentication);
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
         // If admin and ownerId is provided, use it. Otherwise use the authenticated
         // user's ID.
-        Long ownerId = (isAdmin && request.getOwnerId() != null) ? request.getOwnerId() : userId;
+        UUID ownerId = (isAdmin && request.getOwnerId() != null) ? request.getOwnerId() : userId;
 
         ShopResponse response = shopService.registerShop(request, ownerId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -47,7 +56,7 @@ public class ShopController extends BaseController {
     @GetMapping("/mine")
     @PreAuthorize("hasRole('SHOP')")
     public ResponseEntity<List<ShopResponse>> getMyShops(Authentication authentication) {
-        Long userId = extractUserId(authentication);
+        UUID userId = extractUserId(authentication);
         List<ShopResponse> shops = shopService.getShopsByOwner(userId);
         return ResponseEntity.ok(shops);
     }
@@ -93,7 +102,7 @@ public class ShopController extends BaseController {
             @PathVariable Long id,
             Authentication authentication) {
 
-        Long userId = extractUserId(authentication);
+        UUID userId = extractUserId(authentication);
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
@@ -115,7 +124,7 @@ public class ShopController extends BaseController {
             @RequestBody @NotEmpty(message = "Shop IDs list cannot be empty") List<@NotNull(message = "Shop ID cannot be null") Long> shopIds,
             Authentication authentication) {
 
-        Long userId = extractUserId(authentication);
+        UUID userId = extractUserId(authentication);
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 

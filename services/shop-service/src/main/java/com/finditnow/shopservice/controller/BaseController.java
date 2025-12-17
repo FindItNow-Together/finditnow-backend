@@ -1,19 +1,16 @@
 package com.finditnow.shopservice.controller;
 
-import com.finditnow.jwt.JwtService;
-import com.finditnow.shopservice.exception.UnauthorizedException;
-import lombok.RequiredArgsConstructor;
+import java.util.UUID;
+
 import org.springframework.security.core.Authentication;
+
+import com.finditnow.shopservice.exception.UnauthorizedException;
 
 /**
  * Base controller class providing common functionality for all controllers.
  * This reduces code duplication across multiple controller classes.
  */
-@RequiredArgsConstructor
 public abstract class BaseController {
-
-    protected final JwtService jwtUtil;
-
     /**
      * Helper method to extract user ID from authentication token.
      * Throws UnauthorizedException if user ID cannot be extracted.
@@ -22,8 +19,8 @@ public abstract class BaseController {
      * @return User ID from JWT token
      * @throws UnauthorizedException if user ID extraction fails
      */
-    protected Long extractUserId(Authentication authentication) {
-        Long userId = jwtUtil.extractUserId(authentication);
+    protected UUID extractUserId(Authentication authentication) {
+        UUID userId = UUID.fromString((String) authentication.getPrincipal());
         if (userId == null) {
             throw new UnauthorizedException("Unable to extract user ID from authentication token");
         }

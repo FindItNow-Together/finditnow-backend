@@ -1,5 +1,7 @@
 package com.finditnow.shopservice.dto;
 
+import java.util.UUID;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -32,5 +34,5 @@ public class ShopRequest {
      * Optional: ID of the owner to assign this shop to.
      * Only used if the requester is an ADMIN.
      */
-    private Long ownerId;
+    private UUID ownerId;
 }

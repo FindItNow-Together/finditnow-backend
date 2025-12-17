@@ -1,6 +1,6 @@
 package com.finditnow.shopservice.config;
 
-import com.finditnow.userservice.security.JwtAuthFilter;
+import com.finditnow.shopservice.security.JwtAuthFilter;
 import jakarta.servlet.Filter;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;

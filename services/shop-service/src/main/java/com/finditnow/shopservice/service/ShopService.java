@@ -1,17 +1,20 @@
 package com.finditnow.shopservice.service;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
 import com.finditnow.shopservice.entity.Shop;
 import com.finditnow.shopservice.exception.ForbiddenException;
 import com.finditnow.shopservice.exception.NotFoundException;
 import com.finditnow.shopservice.repository.ShopRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +23,7 @@ public class ShopService {
     private final ShopRepository shopRepository;
 
     @Transactional
-    public ShopResponse registerShop(ShopRequest request, Long ownerId) {
+    public ShopResponse registerShop(ShopRequest request, UUID ownerId) {
         Shop shop = new Shop();
         shop.setName(request.getName());
         shop.setAddress(request.getAddress());
@@ -36,7 +39,7 @@ public class ShopService {
     }
 
     @Transactional(readOnly = true)
-    public List<ShopResponse> getShopsByOwner(Long ownerId) {
+    public List<ShopResponse> getShopsByOwner(UUID ownerId) {
         List<Shop> shops = shopRepository.findByOwnerId(ownerId);
         return shops.stream()
                 .map(this::mapToResponse)
@@ -74,7 +77,7 @@ public class ShopService {
      * @throws NotFoundException if the shop doesn't exist
      */
     @Transactional(readOnly = true)
-    public boolean isOwner(Long shopId, Long ownerId) {
+    public boolean isOwner(Long shopId, UUID ownerId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new NotFoundException("Shop not found with id: " + shopId));
         return shop.getOwnerId().equals(ownerId);
@@ -92,7 +95,7 @@ public class ShopService {
      * @throws ForbiddenException if user is not the owner and not admin
      */
     @Transactional
-    public void deleteShop(Long shopId, Long ownerId, boolean isAdmin) {
+    public void deleteShop(Long shopId, UUID ownerId, boolean isAdmin) {
         // Find the shop entity
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new NotFoundException("Shop not found with id: " + shopId));
@@ -119,7 +122,7 @@ public class ShopService {
      * @throws ForbiddenException if user is not the owner of any shop and not admin
      */
     @Transactional
-    public void deleteShops(List<Long> shopIds, Long ownerId, boolean isAdmin) {
+    public void deleteShops(List<Long> shopIds, UUID ownerId, boolean isAdmin) {
         if (shopIds == null || shopIds.isEmpty()) {
             throw new IllegalArgumentException("Shop IDs list cannot be empty");
         }

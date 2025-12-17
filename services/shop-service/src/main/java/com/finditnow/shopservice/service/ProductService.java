@@ -1,5 +1,12 @@
 package com.finditnow.shopservice.service;
 
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.finditnow.shopservice.dto.ProductRequest;
 import com.finditnow.shopservice.dto.ProductResponse;
 import com.finditnow.shopservice.entity.Product;
@@ -8,12 +15,8 @@ import com.finditnow.shopservice.exception.ForbiddenException;
 import com.finditnow.shopservice.exception.NotFoundException;
 import com.finditnow.shopservice.repository.ProductRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +27,7 @@ public class ProductService {
     private final ShopService shopService;
 
     @Transactional
-    public ProductResponse addProduct(Long shopId, ProductRequest request, Long ownerId) {
+    public ProductResponse addProduct(Long shopId, ProductRequest request, UUID ownerId) {
         // Validate that the shop belongs to the owner
         if (!shopService.isOwner(shopId, ownerId)) {
             throw new ForbiddenException("You don't have permission to add products to this shop");
@@ -58,7 +61,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest request, Long ownerId) {
+    public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId) {
         Product product = productRepository.findByIdAndShopOwnerId(productId, ownerId)
                 .orElseThrow(() -> {
                     // Check if product exists at all
@@ -80,7 +83,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long productId, Long ownerId) {
+    public void deleteProduct(Long productId, UUID ownerId) {
         Product product = productRepository.findByIdAndShopOwnerId(productId, ownerId)
                 .orElseThrow(() -> {
                     // Check if product exists at all
@@ -95,7 +98,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProducts(List<Long> productIds, Long ownerId) {
+    public void deleteProducts(List<Long> productIds, UUID ownerId) {
         if (productIds == null || productIds.isEmpty()) {
             throw new IllegalArgumentException("Product IDs list cannot be empty");
         }

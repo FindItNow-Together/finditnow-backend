@@ -1,5 +1,7 @@
 package com.finditnow.shopservice.dto;
 
+import java.util.UUID;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,7 +14,7 @@ public class ShopResponse {
     private String name;
     private String address;
     private String phone;
-    private Long ownerId;
+    private UUID ownerId;
     private Double latitude;
     private Double longitude;
     private String openHours;

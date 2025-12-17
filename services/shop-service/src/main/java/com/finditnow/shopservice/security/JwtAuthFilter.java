@@ -2,13 +2,21 @@ package com.finditnow.shopservice.security;
 
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
+
 import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+
+import org.springframework.security.core.context.SecurityContextHolder;
 
 @Component
 public class JwtAuthFilter implements Filter {
@@ -28,29 +36,42 @@ public class JwtAuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         String token = extractToken(req);
 
-        if (token == null) {
+        if (token == null || redis.isAccessTokenBlacklisted(token)) {
             ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
 
-        boolean isBlackListed = redis.isAccessTokenBlacklisted(token);
-        if (isBlackListed) {
+        try {
+            Map<String, String> userInfo = jwt.parseTokenToUser(token);
+            String userId = userInfo.get("userId");
+            String profile = userInfo.get("profile");
+
+            List<SimpleGrantedAuthority> authorities = Collections.singletonList(
+                    new SimpleGrantedAuthority("ROLE_" + profile.toUpperCase()));
+
+            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                    userId,
+                    null,
+                    authorities);
+
+            SecurityContextHolder.getContext()
+                    .setAuthentication(authentication);
+
+            request.setAttribute("userId", userId);
+            request.setAttribute("profile", userInfo.get("profile"));
+
+        } catch (Exception e) {
             ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return;
         }
-
-        Map<String, String> userInfo = jwt.parseTokenToUser(token);
-
-        // Attach identity to request context
-        request.setAttribute("userId", userInfo.get("userId"));
-        request.setAttribute("profile", userInfo.get("profile"));
 
         chain.doFilter(request, response);
     }
 
     private String extractToken(HttpServletRequest req) {
         String header = req.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) return null;
+        if (header == null || !header.startsWith("Bearer "))
+            return null;
         return header.substring(7);
     }
 }
