@@ -1,3 +1,34 @@
+function Ensure-Database($ContainerId, $DbUser, $DbName)
+{
+    Write-Host ">>> Checking database '$DbName'"
+
+    $exists = docker exec $ContainerId psql `
+    -U $DbUser `
+    -d postgres `
+    -tAc "SELECT 1 FROM pg_database WHERE datname='$DbName'" 2> $null
+
+    if ($exists -eq "1")
+    {
+        Write-Host "    Database '$DbName' already exists."
+        return
+    }
+
+    Write-Host "    Database '$DbName' missing. Creating..."
+
+    docker exec $ContainerId psql -U $DbUser -d postgres -c "CREATE DATABASE $DbName;"
+
+
+    if ($LASTEXITCODE -eq 0)
+    {
+        Write-Host "    Database '$DbName' created."
+    }
+    else
+    {
+        Write-Host "!! Failed to create database '$DbName'"
+        exit 1
+    }
+}
+
 WRITE-HOST "*****finditnow:setup-run*****"
 
 $ScriptPath = $MyInvocation.MyCommand.Path
@@ -55,6 +86,31 @@ if ($LASTEXITCODE -ne 0)
     Write-Host "!! Postgres timeout"; exit 1
 }
 
+# Get container ID
+$pg = docker compose ps -q finditnow-postgres
+
+# DB user (fallback to devuser)
+$dbUser = if ($env:DB_USER)
+{
+    $env:DB_USER
+}
+else
+{
+    "devuser"
+}
+
+# List of DBs to ensure (one per microservice)
+$ServiceDatabases = @(
+    "auth_service",
+    "user_service",
+    "shop_service"
+)
+
+foreach ($db in $ServiceDatabases)
+{
+    Ensure-Database -ContainerId $pg -DbUser $dbUser -DbName $db
+}
+
 # Wait for Redis
 Write-Host ">>>Waiting for Redis..."
 for ($i = 0; $i -lt 20; $i++) {
@@ -78,6 +134,7 @@ cd $ROOT_DIR
 
 Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:auth:run"
 Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:user-service:bootRun"
+Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:shop-service:bootRun"
 
 Write-Host ">>>Opened windows for both services."
 Write-Host ""

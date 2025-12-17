@@ -37,11 +37,11 @@ public class RedisStore {
         return store;
     }
 
-    public void putRefreshToken(String refreshToken, String sessionId, String profile, long ttlMillis) {
+    public void putRefreshToken(String refreshToken, String credId, String profile, long ttlMillis) {
         System.out.println("TTLMillis: " + ttlMillis);
         try (Jedis j = pool.getResource()) {
             String key = "refresh:" + refreshToken;
-            String val = sessionId + "|" + profile;
+            String val = credId + "|" + profile;
             j.setex(key, ttlMillis / 1000L, val);
         }
     }
