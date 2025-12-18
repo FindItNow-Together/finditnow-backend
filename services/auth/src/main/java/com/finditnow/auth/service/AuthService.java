@@ -545,7 +545,12 @@ public class AuthService {
 
         String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"),
                 info.get("profile"));
-        exchange.getResponseSender().send(mapper.writeValueAsString(Map.of("accessToken", newAccess)));
+
+        Map<String, String> resp = new HashMap<>();
+
+        resp.put("accessToken", newAccess);
+        resp.put("profile", info.get("profile"));
+        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
     // used by OAuth service to find or create user by email
