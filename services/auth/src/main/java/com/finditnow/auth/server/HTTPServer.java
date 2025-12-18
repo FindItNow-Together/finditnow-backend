@@ -1,5 +1,6 @@
 package com.finditnow.auth.server;
 
+import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.handlers.CorsHandler;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.handlers.RouteHandler;
@@ -17,8 +18,8 @@ public class HTTPServer {
     //    private final AuthHandler authHandler;
     private final PathHandler pathHandler;
 
-    public HTTPServer(AuthService usrService, OAuthService oauth) {
-        pathHandler = new PathHandler(new RouteHandler(usrService, oauth));
+    public HTTPServer(AuthController authController, OAuthService oauth) {
+        pathHandler = new PathHandler(new RouteHandler(authController, oauth));
     }
 
     public void start() {

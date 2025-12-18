@@ -1,6 +1,7 @@
 package com.finditnow.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
 import com.finditnow.jwt.JwtService;
@@ -12,11 +13,11 @@ import java.util.Map;
 
 public class OAuthService {
     private final ObjectMapper mapper = new ObjectMapper();
-    private final AuthService authService;
+    private final AuthController authController;
     private final JwtService jwt;
 
-    public OAuthService(AuthService authService, JwtService jwt) {
-        this.authService = authService;
+    public OAuthService(AuthController authController, JwtService jwt) {
+        this.authController = authController;
         this.jwt = jwt;
     }
 
@@ -39,15 +40,15 @@ public class OAuthService {
 
         String email = (String) payload.get("email");
 
-        AuthCredential cred = authService.findOrCreateUserByEmail(email);
+        AuthCredential cred = authController.findOrCreateUserByEmail(email);
 
         String profile = req.getOrDefault("auth_profile", cred.getRole().toString()).toString();
 
-        AuthSession authSession = authService.createSessionFromCred(cred);
+        AuthSession authSession = authController.createSessionFromCred(cred);
 
         String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
                 cred.getUserId().toString(), cred.getRole().toString());
-        authService.addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
+        authController.addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
 
         exchange.getResponseSender()
                 .send("{\"access_token\":\"" + accessToken + "\",\"refresh_token\":\"" + authSession.getSessionToken()

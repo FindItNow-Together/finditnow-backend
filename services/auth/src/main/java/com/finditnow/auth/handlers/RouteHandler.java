@@ -1,6 +1,6 @@
 package com.finditnow.auth.handlers;
 
-import com.finditnow.auth.service.AuthService;
+import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.utils.Logger;
 import io.undertow.server.HttpHandler;
@@ -8,11 +8,11 @@ import io.undertow.server.HttpServerExchange;
 
 public class RouteHandler implements HttpHandler {
     private static final Logger logger = Logger.getLogger(RouteHandler.class);
-    private final AuthService authService;
+    private final AuthController authController;
     private final OAuthService oauthService;
 
-    public RouteHandler(AuthService usrService, OAuthService oauth) {
-        authService = usrService;
+    public RouteHandler(AuthController authController, OAuthService oauth) {
+        this.authController = authController;
         oauthService = oauth;
     }
 
@@ -21,38 +21,38 @@ public class RouteHandler implements HttpHandler {
 
         switch (route) {
             case "/signin":
-                authService.signIn(exchange);
+                authController.signIn(exchange);
                 break;
             case "/signup":
-                authService.signUp(exchange);
+                authController.signUp(exchange);
                 break;
             case "/verifyemail":
-                authService.verifyEmail(exchange);
+                authController.verifyEmail(exchange);
                 break;
             case "/resendverificationemail":
-                authService.resendVerificationEmail(exchange);
+                authController.resendVerificationEmail(exchange);
                 break;
             case "/oauth/google/signin":
                 oauthService.handleGoogle(exchange);
                 break;
             case "/refresh":
-                authService.refresh(exchange);
+                authController.refresh(exchange);
                 break;
             case "/logout":
-                authService.logout(exchange);
+                authController.logout(exchange);
                 break;
 
             case "/sendresettoken":
-                authService.sendResetPwdToken(exchange);
+                authController.sendResetPwdToken(exchange);
                 break;
             case "/verifyresettoken":
-                authService.verifyResetToken(exchange);
+                authController.verifyResetToken(exchange);
                 break;
             case "/resetpassword":
-                authService.resetPassword(exchange);
+                authController.resetPassword(exchange);
                 break;
             case "/updatepassword":
-                authService.updatePassword(exchange);
+                authController.updatePassword(exchange);
                 break;
             case "/health":
                 exchange.setStatusCode(200);

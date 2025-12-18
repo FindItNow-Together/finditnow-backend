@@ -1,6 +1,7 @@
 package com.finditnow.auth;
 
 import com.finditnow.auth.config.DatabaseMigrations;
+import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.dao.AuthDao;
 import com.finditnow.auth.server.HTTPServer;
 import com.finditnow.auth.service.AuthService;
@@ -25,10 +26,10 @@ public class AuthApp {
             RedisStore redis = RedisStore.getInstance();
             JwtService jwt = new JwtService();
             AuthDao authDao = new AuthDao(ds);
-            AuthService authServ = new AuthService(authDao, redis, jwt);
-            OAuthService oauth = new OAuthService(authServ, jwt);
+            AuthController authController = new AuthController(authDao, redis, jwt);
+            OAuthService oauth = new OAuthService(authController, jwt);
             Scheduler.init();
-            new HTTPServer(authServ, oauth).start();
+            new HTTPServer(authController, oauth).start();
         } catch (Exception e) {
             logger.error("Failed to start server", e);
             logger.error("SERVER DID NOT START! TERMINATING...");

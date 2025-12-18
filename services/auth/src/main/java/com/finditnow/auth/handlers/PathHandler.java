@@ -40,9 +40,9 @@ public class PathHandler implements HttpHandler {
         privateRoutes.add("/updatepassword");
     }
 
-    private final RouteHandler nextHandler;
+    private final HttpHandler nextHandler;
 
-    public PathHandler(RouteHandler nextHandler) {
+    public PathHandler(HttpHandler nextHandler) {
         this.nextHandler = nextHandler;
     }
 
