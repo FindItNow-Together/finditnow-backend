@@ -47,10 +47,11 @@ public class OAuthService {
 
         String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
                 cred.getUserId().toString(), cred.getRole().toString());
-        authService.addSessionToRedis(authSession, cred.getRole().toString());
+        authService.addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
 
         exchange.getResponseSender()
-                .send("{\"access_token\":\"" + accessToken + "\",\"refresh_token\":\"" + authSession.getSessionToken() + "\"}");
+                .send("{\"access_token\":\"" + accessToken + "\",\"refresh_token\":\"" + authSession.getSessionToken()
+                        + "\"}");
     }
 
     private Map<String, Object> decodeJwtPayload(String jwt) {
@@ -63,4 +64,3 @@ public class OAuthService {
         }
     }
 }
-

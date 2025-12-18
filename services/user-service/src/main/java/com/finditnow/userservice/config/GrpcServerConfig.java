@@ -14,11 +14,12 @@ public class GrpcServerConfig {
     public Server grpcServer(UserServiceGrpc.UserServiceImplBase userServiceImpl) throws Exception {
         System.out.println(">>> [GrpcServerConfig] Bean creation triggered");
         Server server = ServerBuilder
-                .forPort(Integer.parseInt(Config.get("GRPC_SERVER_PORT", "8082")))
+                .forPort(Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083")))
                 .addService(userServiceImpl)
                 .build()
                 .start();
-        System.out.println(">>> [GrpcServerConfig] gRPC Server Started on 8082");
+        System.out.println(
+                ">>> [GrpcServerConfig] gRPC Server Started on " + Config.get("USER_SERVICE_GRPC_PORT", "8083"));
         return server;
     }
 }

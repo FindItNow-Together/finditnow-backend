@@ -1,5 +1,17 @@
 package com.finditnow.shopservice.security;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
 
@@ -7,19 +19,8 @@ import jakarta.servlet.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.stereotype.Component;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.security.core.context.SecurityContextHolder;
-
 @Component
-public class JwtAuthFilter implements Filter {
+public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
 
     private final JwtService jwt;
     private final RedisStore redis;
@@ -30,14 +31,13 @@ public class JwtAuthFilter implements Filter {
     }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
-        HttpServletRequest req = (HttpServletRequest) request;
-        String token = extractToken(req);
+        String token = extractToken(request);
 
         if (token == null || redis.isAccessTokenBlacklisted(token)) {
-            ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -50,22 +50,23 @@ public class JwtAuthFilter implements Filter {
                     new SimpleGrantedAuthority("ROLE_" + profile.toUpperCase()));
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userId,
-                    null,
-                    authorities);
+                    userId, null, authorities);
 
-            SecurityContextHolder.getContext()
-                    .setAuthentication(authentication);
+            // 2. Set additional request details
+            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Optional: Continue using attributes if needed for controllers
             request.setAttribute("userId", userId);
-            request.setAttribute("profile", userInfo.get("profile"));
+            request.setAttribute("profile", profile);
 
         } catch (Exception e) {
-            ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
+            // 3. Clear context on failure
+            SecurityContextHolder.clearContext();
         }
 
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 
     private String extractToken(HttpServletRequest req) {

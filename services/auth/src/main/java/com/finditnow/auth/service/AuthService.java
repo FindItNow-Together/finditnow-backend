@@ -85,15 +85,17 @@ public class AuthService {
         UUID credId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
 
-//        if(!PasswordUtil.checkPwdString(password)) {
-//            exchange.setStatusCode(409);
-//            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
-//            return;
-//        }
+        // if(!PasswordUtil.checkPwdString(password)) {
+        // exchange.setStatusCode(409);
+        // exchange.getResponseSender().send("{\"error\":\"password not in desired
+        // format\"}");
+        // return;
+        // }
 
         String pwHash = PasswordUtil.hash(password);
 
-        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false, OffsetDateTime.now());
+        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false,
+                OffsetDateTime.now());
         cred.setFirstName(firstName);
         authDao.credDao.insert(cred);
 
@@ -148,11 +150,15 @@ public class AuthService {
         Optional<AuthCredential> authCred = authDao.credDao.findById(UUID.fromString(credId));
         AuthCredential cred = authCred.get();
 
-        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 8082).usePlaintext().build();
+        ManagedChannel channel = ManagedChannelBuilder
+                .forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"),
+                        Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083")))
+                .usePlaintext().build();
 
         UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
 
-        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName("User").build());
+        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString())
+                .setEmail(cred.getEmail()).setName(cred.getFirstName()).build());
 
         if (!res.hasUser()) {
             exchange.setStatusCode(500);
@@ -162,9 +168,10 @@ public class AuthService {
 
         AuthSession authSession = createSessionFromCred(cred);
 
-        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), "customer");
+        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
+                cred.getUserId().toString(), cred.getRole().toString());
 
-        addSessionToRedis(authSession, cred.getRole().toString());
+        addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
 
         Map<String, String> resp = new HashMap<>();
         resp.put("accessToken", accessToken);
@@ -180,7 +187,7 @@ public class AuthService {
 
         String credId = bodyMap.get("credId");
 
-        //email is required for sending verification email
+        // email is required for sending verification email
         if (credId == null || credId.isEmpty()) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
@@ -222,7 +229,9 @@ public class AuthService {
     private String sendVerificationEmail(String email, String credId) {
         String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-        mailer.send(email, "FindItNow: Email Verification", String.format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>", emailOtp), true);
+        mailer.send(email, "FindItNow: Email Verification", String.format(
+                "Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                emailOtp), true);
 
         redis.setKey("emailOtp:" + credId, emailOtp, 2 * 60L);
         return emailOtp;
@@ -239,11 +248,12 @@ public class AuthService {
             return;
         }
 
-//        if (email!=null && !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-//            exchange.setStatusCode(400);
-//            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
-//            return;
-//        }
+        // if (email!=null &&
+        // !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+        // exchange.setStatusCode(400);
+        // exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
+        // return;
+        // }
 
         Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
 
@@ -254,13 +264,16 @@ public class AuthService {
         }
 
         String resetOtp = OtpGenerator.generateSecureOtp(8);
-        mailer.send(email, "Reset Password Token:Finditnow", String.format("Your reset password token: <strong style=\\\"font-size:18px\\\">%s</strong>.<br><p style=\\\"font-weight:700\\\">" + "This email is system generated. Do not reply</p>", resetOtp), true);
+        mailer.send(email, "Reset Password Token:Finditnow", String.format(
+                "Your reset password token: <strong style=\\\"font-size:18px\\\">%s</strong>.<br><p style=\\\"font-weight:700\\\">"
+                        + "This email is system generated. Do not reply</p>",
+                resetOtp), true);
         redis.setKey("resetOtp:" + email, resetOtp, Duration.ofMinutes(5).toSeconds());
 
         exchange.setStatusCode(200);
-        exchange.getResponseSender().send("{\"message\":\"verification email resent\", \"tokenValiditySeconds\": \"300\"}");
+        exchange.getResponseSender()
+                .send("{\"message\":\"verification email resent\", \"tokenValiditySeconds\": \"300\"}");
     }
-
 
     public void verifyResetToken(HttpServerExchange exchange) throws Exception {
         Map<String, String> bodyMap = getRequestBody(exchange);
@@ -279,11 +292,12 @@ public class AuthService {
             return;
         }
 
-//        if (email!=null && !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-//            exchange.setStatusCode(400);
-//            exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
-//            return;
-//        }
+        // if (email!=null &&
+        // !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
+        // exchange.setStatusCode(400);
+        // exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
+        // return;
+        // }
 
         String storedToken = redis.getKeyValue("resetOtp:" + email);
         if (storedToken == null) {
@@ -323,11 +337,12 @@ public class AuthService {
             return;
         }
 
-//        if(!PasswordUtil.checkPwdString(password)) {
-//            exchange.setStatusCode(409);
-//            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
-//            return;
-//        }
+        // if(!PasswordUtil.checkPwdString(password)) {
+        // exchange.setStatusCode(409);
+        // exchange.getResponseSender().send("{\"error\":\"password not in desired
+        // format\"}");
+        // return;
+        // }
 
         if (redis.getKeyValue("resetAllowed:" + email) != null) {
             exchange.setStatusCode(400);
@@ -408,8 +423,9 @@ public class AuthService {
 
         AuthSession authSession = createSessionFromCred(cred);
 
-        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
-        addSessionToRedis(authSession, cred.getRole().toString());
+        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
+                cred.getUserId().toString(), cred.getRole().toString());
+        addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
 
         Map<String, String> resp = new HashMap<>();
 
@@ -490,7 +506,8 @@ public class AuthService {
     }
 
     public AuthSession createSessionFromCred(AuthCredential cred) {
-        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), "password", OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
+        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(),
+                "password", OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
 
         authDao.sessionDao.insert(authSession);
 
@@ -498,9 +515,11 @@ public class AuthService {
     }
 
     // create server session: stores session in DB and Redis
-    void addSessionToRedis(AuthSession authSession, String role) throws Exception {
+    void addSessionToRedis(AuthSession authSession, String userId, String role) throws Exception {
         // store in Redis: key refresh:<token> -> userId|profile
-        redis.putRefreshToken(authSession.getSessionToken(), authSession.getCredId().toString(), role, Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
+        redis.putRefreshToken(authSession.getSessionToken(), authSession.getId().toString(),
+                authSession.getCredId().toString(), userId, role,
+                Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
     }
 
     // refresh access token flow
@@ -524,7 +543,8 @@ public class AuthService {
             return;
         }
 
-        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"), info.get("profile"));
+        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"),
+                info.get("profile"));
         exchange.getResponseSender().send(mapper.writeValueAsString(Map.of("accessToken", newAccess)));
     }
 
