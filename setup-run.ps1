@@ -64,6 +64,7 @@ if (Test-Path $EnvFile)
 Write-Host ">>>Ensuring container persistence volume"
 New-Item -ItemType Directory -Force -Path "$DATA_DIR\postgres" | Out-Null
 New-Item -ItemType Directory -Force -Path "$DATA_DIR\redis" | Out-Null
+New-Item -ItemType Directory -Force -Path "$INFRA_DIR\nginx" | Out-Null
 
 Write-Host ">>>Starting infra containers"
 cd $INFRA_DIR

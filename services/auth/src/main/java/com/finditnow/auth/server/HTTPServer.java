@@ -1,10 +1,10 @@
 package com.finditnow.auth.server;
 
 import com.finditnow.auth.controller.AuthController;
+import com.finditnow.auth.controller.OauthController;
 import com.finditnow.auth.handlers.CorsHandler;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.handlers.RouteHandler;
-import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.config.Config;
@@ -14,12 +14,12 @@ import io.undertow.util.Headers;
 
 public class HTTPServer {
     private static final Logger logger = Logger.getLogger(HTTPServer.class);
-    private final int httpPort = Integer.parseInt(Config.get("HTTPPort", "8080"));
+    private final int httpPort = Integer.parseInt(Config.get("AUTH_SERVICE_PORT", "8080"));
     //    private final AuthHandler authHandler;
     private final PathHandler pathHandler;
 
-    public HTTPServer(AuthController authController, OAuthService oauth) {
-        pathHandler = new PathHandler(new RouteHandler(authController, oauth));
+    public HTTPServer(AuthController authController, OauthController oauthController) {
+        pathHandler = new PathHandler(new RouteHandler(authController, oauthController));
     }
 
     public void start() {

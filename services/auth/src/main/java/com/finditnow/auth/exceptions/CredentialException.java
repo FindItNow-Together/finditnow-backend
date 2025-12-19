@@ -1,6 +1,6 @@
 package com.finditnow.auth.exceptions;
 
-public class CredentialException extends  RuntimeException {
+public class CredentialException extends RuntimeException {
     public CredentialException() {
     }
 

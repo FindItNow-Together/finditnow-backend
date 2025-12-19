@@ -12,6 +12,10 @@ public class Logger {
         logger = LoggerFactory.getLogger(clazz);
     }
 
+    public static Logger getLogger(Class<?> clazz) {
+        return new Logger(clazz);
+    }
+
     public void logResponse(HttpServerExchange exchange) {
         int statusCode = exchange.getStatusCode();
         String method = exchange.getRequestMethod().toString();
@@ -37,10 +41,6 @@ public class Logger {
 
     public void error(String message) {
         logger.error(message);
-    }
-
-    public static Logger getLogger(Class<?> clazz) {
-        return new Logger(clazz);
     }
 
     public org.slf4j.Logger getCore() {

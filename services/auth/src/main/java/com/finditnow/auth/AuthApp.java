@@ -2,6 +2,7 @@ package com.finditnow.auth;
 
 import com.finditnow.auth.config.DatabaseMigrations;
 import com.finditnow.auth.controller.AuthController;
+import com.finditnow.auth.controller.OauthController;
 import com.finditnow.auth.dao.AuthDao;
 import com.finditnow.auth.server.HTTPServer;
 import com.finditnow.auth.service.AuthService;
@@ -27,11 +28,12 @@ public class AuthApp {
             JwtService jwt = new JwtService();
             AuthDao authDao = new AuthDao(ds);
             AuthService authService = new AuthService(authDao, redis, jwt);
-            AuthController authController = new AuthController(authService, authDao, redis, jwt);
+            AuthController authController = new AuthController(authService);
 
-            OAuthService oauth = new OAuthService(authController, jwt);
+            OAuthService oauth = new OAuthService(authService, jwt);
+            OauthController oauthController = new OauthController(oauth);
             Scheduler.init();
-            new HTTPServer(authController, oauth).start();
+            new HTTPServer(authController, oauthController).start();
         } catch (Exception e) {
             logger.error("Failed to start server", e);
             logger.error("SERVER DID NOT START! TERMINATING...");

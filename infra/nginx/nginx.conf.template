@@ -1,0 +1,50 @@
+upstream auth_service_upstream {
+    server host.docker.internal:${AUTH_SERVICE_PORT};
+}
+
+upstream user_service_upstream {
+    server host.docker.internal:${USER_SERVICE_PORT};
+}
+
+upstream shop_service_upstream {
+    server host.docker.internal:${SHOP_SERVICE_PORT};
+}
+
+server {
+    listen 80;
+
+    # Resolver for host.docker.internal
+    resolver 127.0.0.11 valid=10s;
+
+    location /api/auth/ {
+        proxy_pass http://auth_service_upstream/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    location /api/users/ {
+        proxy_pass http://user_service_upstream/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    location /api/shop/ {
+        proxy_pass http://shop_service_upstream/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+
+    location /health {
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+}

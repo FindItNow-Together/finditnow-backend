@@ -1,6 +1,7 @@
 package com.finditnow.auth.handlers;
 
 import com.finditnow.auth.controller.AuthController;
+import com.finditnow.auth.controller.OauthController;
 import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.utils.Logger;
 import io.undertow.server.HttpHandler;
@@ -9,11 +10,11 @@ import io.undertow.server.HttpServerExchange;
 public class RouteHandler implements HttpHandler {
     private static final Logger logger = Logger.getLogger(RouteHandler.class);
     private final AuthController authController;
-    private final OAuthService oauthService;
+    private final OauthController oauthController;
 
-    public RouteHandler(AuthController authController, OAuthService oauth) {
+    public RouteHandler(AuthController authController, OauthController oauthController) {
         this.authController = authController;
-        oauthService = oauth;
+        this.oauthController = oauthController;
     }
 
     public final void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -33,7 +34,7 @@ public class RouteHandler implements HttpHandler {
                 authController.resendVerificationEmail(exchange);
                 break;
             case "/oauth/google/signin":
-                oauthService.handleGoogle(exchange);
+                oauthController.handleGoogle(exchange);
                 break;
             case "/refresh":
                 authController.refresh(exchange);

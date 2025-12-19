@@ -1,13 +1,12 @@
 package com.finditnow.auth.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dao.AuthDao;
+import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.dto.SignUpDto;
-import com.finditnow.auth.exceptions.CredentialException;
-import com.finditnow.auth.exceptions.NoSuchCredentialException;
-import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
+import com.finditnow.auth.transaction.TransactionManager;
+import com.finditnow.auth.types.Role;
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
@@ -20,12 +19,9 @@ import com.finditnow.user.CreateUserProfileRequest;
 import com.finditnow.user.UserServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import io.undertow.server.HttpServerExchange;
-import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
@@ -36,587 +32,458 @@ import java.util.UUID;
 public class AuthService {
     private static final Logger logger = Logger.getLogger(AuthService.class);
     private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
-    private final ObjectMapper mapper = new ObjectMapper();
     private final AuthDao authDao;
     private final RedisStore redis;
     private final JwtService jwt;
-
+    private final TransactionManager transactionManager;
     private final long refreshTokenMaxLifeSeconds = Duration.ofDays(7).toSeconds();
 
     public AuthService(AuthDao authDao, RedisStore redis, JwtService jwt) {
         this.authDao = authDao;
         this.redis = redis;
         this.jwt = jwt;
+        this.transactionManager = new TransactionManager(authDao.getDataSource());
     }
 
-    // signup with email + password
-    public void signUp(HttpServerExchange exchange) throws Exception {
-        Map<String, String> req = getRequestBody(exchange);
-        String email = req.get("email");
-        String firstName = req.get("firstName");
-        String phone = req.get("phone");
-        String password = req.get("password");
-        String role = req.get("role");
+    public AuthResponse signUp(SignUpDto signUpReq) {
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                // Check for existing credential
+                Optional<AuthCredential> existingCred = authDao.credDao.findByEmail(conn, signUpReq.getEmail());
 
-        if ((email == null && phone == null) || password == null || firstName == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
+                if (existingCred.isPresent()) {
+                    AuthCredential cred = existingCred.get();
+                    Map<String, String> data = new HashMap<>();
+
+                    if (cred.isEmailVerified()) {
+                        data.put("error", "user_already_verified");
+                        return new AuthResponse(409, data);
+                    } else {
+                        data.put("error", "account_not_verified");
+                        data.put("credId", cred.getId().toString());
+                        return new AuthResponse(400, data);
+                    }
+                }
+
+                // Create new credential
+                UUID credId = UUID.randomUUID();
+                UUID userId = UUID.randomUUID();
+                String pwHash = PasswordUtil.hash(signUpReq.getPassword());
+
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                cred.setFirstName(signUpReq.getFirstName());
+
+                authDao.credDao.insert(conn, cred);
+
+                // Send verification email (outside transaction)
+                String emailOtp = sendVerificationEmail(signUpReq.getEmail(), credId.toString());
+
+                Map<String, String> data = new HashMap<>();
+                data.put("credId", credId.toString());
+                data.put("message", "verification email sent");
+                data.put("accessTokenValiditySeconds", "120");
+
+                if (Config.get("ENVIRONMENT", "development").equals("development")) {
+                    data.put("emailOtp", emailOtp);
+                }
+
+                return new AuthResponse(201, data);
+            });
+
+        } catch (Exception e) {
+            logger.getCore().error("Signup failed", e);
+            Map<String, String> data = new HashMap<>();
+            data.put("error", "internal_server_error");
+            return new AuthResponse(500, data);
         }
-
-        if (role == null) {
-            role = "customer";
-        }
-
-        Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
-
-        if (email != null && authCred.isPresent()) {
-            exchange.setStatusCode(409);
-            if (authCred.get().isEmailVerified()) {
-                exchange.getResponseSender().send("{\"error\":\"user_verified\"}");
-            } else {
-                Map<String, String> res = new HashMap<>();
-                res.put("error", "account_not_verified");
-                res.put("credId", authCred.get().getId().toString());
-                exchange.setStatusCode(400);
-                exchange.getResponseSender().send(mapper.writeValueAsString(res));
-            }
-
-            return;
-        }
-
-        UUID credId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
-        // if(!PasswordUtil.checkPwdString(password)) {
-        // exchange.setStatusCode(409);
-        // exchange.getResponseSender().send("{\"error\":\"password not in desired
-        // format\"}");
-        // return;
-        // }
-
-        String pwHash = PasswordUtil.hash(password);
-
-        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false,
-                OffsetDateTime.now());
-        cred.setFirstName(firstName);
-        authDao.credDao.insert(cred);
-
-        String emailOtp = sendVerificationEmail(email, credId.toString());
-
-        Map<String, String> resp = new HashMap<>();
-
-        resp.put("credId", credId.toString());
-        resp.put("message", "verification email sent");
-
-        resp.put("accessTokenValiditySeconds", "120");
-
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            resp.put("emailOtp", emailOtp);
-        }
-
-        exchange.setStatusCode(201);
-        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
-    public void verifyEmail(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
-
-        String credId = bodyMap.get("credId");
-        String verificationOtp = bodyMap.get("verificationCode");
-
-        if (credId == null || verificationOtp == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
-        }
-
+    public AuthResponse verifyEmail(String credId, String verificationOtp) {
+        Map<String, String> data = new HashMap<>();
         String storedOtp = redis.getKeyValue("emailOtp:" + credId);
 
         if (storedOtp == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"otp_not_found\"}");
-            return;
+            data.put("error", "otp_not_found");
+            return new AuthResponse(400, data);
         }
 
         if (!storedOtp.equals(verificationOtp)) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"invalid_otp\"}");
-            return;
+            data.put("error", "invalid_otp");
+            return new AuthResponse(400, data);
         }
 
-        Map<String, Object> updateFields = new HashMap<>();
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                // Update email verification status
+                Map<String, Object> updateFields = new HashMap<>();
+                updateFields.put("is_email_verified", true);
+                authDao.credDao.updateCredFieldsById(conn, UUID.fromString(credId), updateFields);
 
-        updateFields.put("is_email_verified", true);
-        authDao.credDao.updateCredFieldsById(UUID.fromString(credId), updateFields);
+                // Fetch updated credential
+                Optional<AuthCredential> authCred = authDao.credDao.findById(conn, UUID.fromString(credId));
+                if (authCred.isEmpty()) {
+                    data.put("error", "credential_not_found");
+                    return new AuthResponse(404, data);
+                }
 
-        Optional<AuthCredential> authCred = authDao.credDao.findById(UUID.fromString(credId));
-        AuthCredential cred = authCred.get();
+                AuthCredential cred = authCred.get();
 
-        ManagedChannel channel = ManagedChannelBuilder
-                .forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"),
-                        Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083")))
-                .usePlaintext().build();
+                // Create user profile (can be done outside transaction if needed)
+                try {
+                    createUserProfile(cred);
+                } catch (Exception e) {
+                    logger.getCore().error("Failed to create user profile", e);
+                    throw new RuntimeException("User profile creation failed", e);
+                }
 
-        UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
+                // Create session
+                AuthSession authSession = createSessionInTransaction(conn, cred, "password");
 
-        var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString())
-                .setEmail(cred.getEmail()).setName(cred.getFirstName()).build());
+                // Generate tokens
+                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
 
-        if (!res.hasUser()) {
-            exchange.setStatusCode(500);
-            exchange.getResponseSender().send("{\"error\":\"internal server error\"}");
-            return;
+                // Store in Redis (outside DB transaction)
+                try {
+                    addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
+                } catch (Exception e) {
+                    logger.getCore().error("Failed to add session to Redis", e);
+                    throw new RuntimeException("Redis operation failed", e);
+                }
+
+                data.put("accessToken", accessToken);
+                data.put("profile", cred.getRole().toString());
+                data.put("firstName", cred.getFirstName());
+                data.put("sessionToken", authSession.getSessionToken());
+
+                return new AuthResponse(200, data);
+            });
+
+        } catch (Exception e) {
+            logger.getCore().error("Email verification failed", e);
+            data.put("error", "internal_server_error");
+            return new AuthResponse(500, data);
         }
-
-        AuthSession authSession = createSessionFromCred(cred);
-
-        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
-                cred.getUserId().toString(), cred.getRole().toString());
-
-        addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
-
-        Map<String, String> resp = new HashMap<>();
-        resp.put("accessToken", accessToken);
-        resp.put("profile", cred.getRole().toString());
-        resp.put("firstName", cred.getFirstName());
-
-        setRefreshCookie(exchange, authSession.getSessionToken(), false);
-        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
     }
 
-    public void resendVerificationEmail(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
+    public AuthResponse resetPassword(String email, String phone, String password) {
+        Map<String, String> data = new HashMap<>();
 
-        String credId = bodyMap.get("credId");
-
-        // email is required for sending verification email
-        if (credId == null || credId.isEmpty()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
+        if (redis.getKeyValue("resetAllowed:" + email) == null) {
+            data.put("error", "reset window exceeded");
+            return new AuthResponse(400, data);
         }
 
-        Optional<AuthCredential> authCred = authDao.credDao.findById(UUID.fromString(credId));
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                Optional<AuthCredential> credOpt = authDao.credDao.findByEmail(conn, email);
+                if (credOpt.isEmpty()) {
+                    data.put("error", "credential_not_found");
+                    return new AuthResponse(404, data);
+                }
 
-        if (authCred.isEmpty()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"email_not_registered\"}");
-            return;
+                AuthCredential cred = credOpt.get();
+                Map<String, Object> updateFields = new HashMap<>();
+                updateFields.put("password_hash", PasswordUtil.hash(password));
+                authDao.credDao.updateCredFieldsById(conn, cred.getId(), updateFields);
+
+                // Clean up Redis keys (outside transaction)
+                redis.deleteKey("resetAllowed:" + email);
+
+                data.put("message", "password updated");
+                return new AuthResponse(200, data);
+            });
+
+        } catch (Exception e) {
+            logger.getCore().error("Password reset failed", e);
+            data.put("error", "internal_server_error");
+            return new AuthResponse(500, data);
         }
+    }
 
-        AuthCredential cred = authCred.get();
+    public AuthResponse signIn(String identifier, String password) {
+        Map<String, String> data = new HashMap<>();
 
-        if (cred.isEmailVerified()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"email_verified\"}");
-            return;
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                // Find credential
+                Optional<AuthCredential> authCred = authDao.credDao.findByIdentifier(conn, identifier);
+
+                if (authCred.isEmpty()) {
+                    data.put("error", "invalid credentials");
+                    return new AuthResponse(401, data);
+                }
+
+                AuthCredential cred = authCred.get();
+
+                if (!cred.isEmailVerified() && !cred.isPhoneVerified()) {
+                    data.put("error", "account_not_verified");
+                    data.put("credId", cred.getId().toString());
+                    return new AuthResponse(403, data);
+                }
+
+                if (!PasswordUtil.verifyPassword(password, cred.getPasswordHash())) {
+                    data.put("error", "invalid credentials");
+                    return new AuthResponse(401, data);
+                }
+
+                // Create session
+                AuthSession authSession = createSessionInTransaction(conn, cred, "password");
+
+                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
+
+                // Store in Redis
+                try {
+                    addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("Redis operation failed", e);
+                }
+
+                data.put("accessToken", accessToken);
+                data.put("profile", cred.getRole().toString());
+                data.put("firstName", cred.getFirstName());
+                data.put("sessionToken", authSession.getSessionToken());
+
+                return new AuthResponse(200, data);
+            });
+
+        } catch (Exception e) {
+            logger.getCore().error("Sign in failed", e);
+            data.put("error", "internal_server_error");
+            return new AuthResponse(500, data);
         }
+    }
 
-        String email = cred.getEmail();
+    public AuthCredential findOrCreateUserByEmail(String email) {
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                Optional<AuthCredential> existing = authDao.credDao.findByEmail(conn, email);
 
-        String emailOtp = sendVerificationEmail(email, credId);
+                if (existing.isPresent()) {
+                    return existing.get();
+                }
 
-        Map<String, String> resp = new HashMap<>();
+                // Create new credential for OAuth
+                UUID id = UUID.randomUUID();
+                UUID userId = UUID.randomUUID();
+                AuthCredential cred = new AuthCredential();
+                cred.setId(id);
+                cred.setUserId(userId);
+                cred.setEmailVerified(true);
+                cred.setEmail(email);
+                cred.setRole(Role.CUSTOMER);
 
-        resp.put("message", "verification email sent");
-        resp.put("accessTokenValiditySeconds", "120");
+                authDao.credDao.insert(conn, cred);
 
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            resp.put("emailOtp", emailOtp);
+                // Create user profile
+                try {
+                    createUserProfile(cred);
+                } catch (Exception e) {
+                    logger.getCore().warn("Failed to create user profile for OAuth user", e);
+                }
+
+                return cred;
+            });
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to find or create user", e);
         }
-        exchange.setStatusCode(201);
-        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
+    }
+
+    // Helper methods
+    private AuthSession createSessionInTransaction(Connection conn, AuthCredential cred, String sessionMethod) throws Exception {
+        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), sessionMethod, OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
+
+        authDao.sessionDao.insert(conn, authSession);
+        return authSession;
+    }
+
+    public void addSessionToRedis(AuthSession authSession, String userId, String role) throws Exception {
+        redis.putRefreshToken(authSession.getSessionToken(), authSession.getId().toString(), authSession.getCredId().toString(), userId, role, Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
     }
 
     private String sendVerificationEmail(String email, String credId) {
         String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-        mailer.send(email, "FindItNow: Email Verification", String.format(
-                "Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br><p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
-                emailOtp), true);
+        mailer.send(email, "FindItNow: Email Verification", String.format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br>" + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>", emailOtp), true);
 
         redis.setKey("emailOtp:" + credId, emailOtp, 2 * 60L);
         return emailOtp;
     }
 
-    public void sendResetPwdToken(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
-        String email = bodyMap.get("email");
-        String phone = bodyMap.get("phone");
+    private void createUserProfile(AuthCredential cred) {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"), Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
 
-        if (email == null && phone == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
+        try {
+            UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
+            var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName(cred.getFirstName()).build());
+
+            if (!res.hasUser()) {
+                throw new RuntimeException("User profile creation failed");
+            }
+        } finally {
+            channel.shutdown();
         }
+    }
 
-        // if (email!=null &&
-        // !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-        // exchange.setStatusCode(400);
-        // exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
-        // return;
-        // }
-
-        Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
+    public AuthResponse resendVerificationEmail(String credId) {
+        Map<String, String> data = new HashMap<>();
+        Optional<AuthCredential> authCred;
+        try {
+            authCred = authDao.credDao.findById(UUID.fromString(credId));
+        } catch (SQLException e) {
+            logger.getCore().error(e.getMessage());
+            data.put("error", "internal server error");
+            return new AuthResponse(500, data);
+        }
 
         if (authCred.isEmpty()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"email not registered\"}");
-            return;
-        }
-
-        String resetOtp = OtpGenerator.generateSecureOtp(8);
-        mailer.send(email, "Reset Password Token:Finditnow", String.format(
-                "Your reset password token: <strong style=\\\"font-size:18px\\\">%s</strong>.<br><p style=\\\"font-weight:700\\\">"
-                        + "This email is system generated. Do not reply</p>",
-                resetOtp), true);
-        redis.setKey("resetOtp:" + email, resetOtp, Duration.ofMinutes(5).toSeconds());
-
-        exchange.setStatusCode(200);
-        exchange.getResponseSender()
-                .send("{\"message\":\"verification email resent\", \"tokenValiditySeconds\": \"300\"}");
-    }
-
-    public void verifyResetToken(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
-        String email = bodyMap.get("email");
-        String phone = bodyMap.get("phone");
-        String token = bodyMap.get("resetToken");
-
-        if (email == null && phone == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
-        }
-        if (token == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_token\"}");
-            return;
-        }
-
-        // if (email!=null &&
-        // !email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) {
-        // exchange.setStatusCode(400);
-        // exchange.getResponseSender().send("{\"error\":\"invalid email\"}");
-        // return;
-        // }
-
-        String storedToken = redis.getKeyValue("resetOtp:" + email);
-        if (storedToken == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"invalid_token\"}");
-            return;
-        }
-
-        if (!storedToken.equals(token)) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"invalid_token\"}");
-            return;
-        }
-
-        redis.deleteKey("resetOtp:" + email);
-        redis.setKey("resetAllowed:" + email, String.valueOf(true), Duration.ofMinutes(2).toSeconds());
-        exchange.setStatusCode(200);
-        exchange.getResponseSender().send("{\"message\":\"token_verified\"}");
-    }
-
-    public void resetPassword(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
-
-        String email = bodyMap.get("email");
-        String phone = bodyMap.get("phone");
-        String password = bodyMap.get("newPassword");
-
-        if (email == null && phone == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"either phone or email is required\"}");
-            return;
-        }
-
-        if (password == null || password.isEmpty()) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"password is required\"}");
-            return;
-        }
-
-        // if(!PasswordUtil.checkPwdString(password)) {
-        // exchange.setStatusCode(409);
-        // exchange.getResponseSender().send("{\"error\":\"password not in desired
-        // format\"}");
-        // return;
-        // }
-
-        if (redis.getKeyValue("resetAllowed:" + email) != null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"reset window exceeded\"}");
-            return;
-        }
-
-        AuthCredential cred = authDao.credDao.findByEmail(email).get();
-
-        Map<String, Object> updateFields = new HashMap<>();
-
-        updateFields.put("password_hash", PasswordUtil.hash(password));
-        authDao.credDao.updateCredFieldsById(cred.getId(), updateFields);
-
-        redis.deleteKey("resetAllowed:" + email);
-        exchange.setStatusCode(200);
-        exchange.getResponseSender().send("{\"message\":\"password updated\"}");
-    }
-
-    public void updatePassword(HttpServerExchange exchange) throws Exception {
-        Map<String, String> bodyMap = getRequestBody(exchange);
-
-        String newPassword;
-        if ((newPassword = bodyMap.get("newPassword")) == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"password_required\"}");
-            return;
-        }
-
-        if (!PasswordUtil.checkPwdString(newPassword)) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"password not in desired format\"}");
-            return;
-        }
-
-        Map<String, String> authInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
-
-        Map<String, Object> updateFields = new HashMap<>();
-        updateFields.put("password_hash", newPassword);
-        authDao.credDao.updateCredFieldsById(UUID.fromString(authInfo.get("credId")), updateFields);
-    }
-
-    // signin using email or phone or username + password
-    public void signIn(HttpServerExchange exchange) throws Exception {
-        Map<String, String> req = getRequestBody(exchange);
-        String identifier = req.get("email"); // email or phone or username
-        String password = req.get("password");
-
-        if (identifier == null || password == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
-            return;
-        }
-
-        Optional<AuthCredential> authCred = authDao.credDao.findByIdentifier(identifier);
-        if (authCred.isEmpty()) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"invalid_credentials\"}");
-            return;
+            data.put("error", "email_not_registered");
+            return new AuthResponse(400, data);
         }
 
         AuthCredential cred = authCred.get();
 
-        if (!cred.isEmailVerified() && !cred.isPhoneVerified()) {
-            Map<String, String> res = new HashMap<>();
-            res.put("error", "account_not_verified");
-            res.put("credId", cred.getId().toString());
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send(mapper.writeValueAsString(res));
-            return;
+        if (cred.isEmailVerified()) {
+            data.put("error", "email_verified");
+            return new AuthResponse(400, data);
         }
 
-        if (!PasswordUtil.verifyPassword(password, cred.getPasswordHash())) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"invalid_credentials\"}");
-            return;
-        }
+        String emailOtp = sendVerificationEmail(cred.getEmail(), credId);
 
-        AuthSession authSession = createSessionFromCred(cred);
-
-        String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
-                cred.getUserId().toString(), cred.getRole().toString());
-        addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
-
-        Map<String, String> resp = new HashMap<>();
-
-        resp.put("accessToken", accessToken);
-        resp.put("profile", cred.getRole().toString());
-        resp.put("firstName", cred.getFirstName());
-
-        setRefreshCookie(exchange, authSession.getSessionToken(), false);
-
-        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
-    }
-
-    private Map<String, String> getRequestBody(HttpServerExchange exchange) throws IOException {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        Map<String, String> req = mapper.readValue(body, Map.class);
-        return req;
-    }
-
-    public void logout(HttpServerExchange exchange) throws Exception {
-        String accessToken = exchange.getAttachment(PathHandler.AUTH_TOKEN);
-        Map<String, String> tokenUserInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
-        String refreshToken = null;
-        if (accessToken == null) {
-            Cookie refreshCookie = exchange.getRequestCookie("refresh_token");
-
-            if (refreshCookie == null) {
-                exchange.setStatusCode(200);
-                exchange.getResponseSender().send("{\"message\":\"already logged out\"}");
-                return;
-            }
-
-            refreshToken = refreshCookie.getValue();
-
-            authDao.sessionDao.invalidateByToken(refreshToken);
-        } else {
-            refreshToken = authDao.sessionDao.invalidate(UUID.fromString(tokenUserInfo.get("sessionId")));
-        }
-
-        // Delete refresh token from DB and Redis
-
-        redis.deleteRefreshToken(refreshToken);
-
-        // Blacklist the access token if provided
-        try {
-            long ttlSeconds = jwt.getTokenRemainingTtlSeconds(accessToken);
-            if (ttlSeconds > 0) {
-                redis.blacklistAccessToken(accessToken, ttlSeconds);
-            }
-        } catch (Exception e) {
-            // Log error but don't fail logout if token blacklisting fails
-            logger.getCore().warn("Failed to blacklist access token during logout", e);
-        }
-
-        setRefreshCookie(exchange, "", true);
-        exchange.getResponseSender().send("{\"message\":\"logged out successfully\"}");
-    }
-
-    private void setRefreshCookie(HttpServerExchange exchange, String token, boolean isExpired) throws IOException {
-        CookieImpl cookie = new CookieImpl("refresh_token", token);
-        cookie.setHttpOnly(true);
-
-        if (isExpired) {
-            cookie.setMaxAge(0);
-        } else {
-            cookie.setMaxAge(((int) refreshTokenMaxLifeSeconds));
-        }
+        data.put("message", "verification email sent");
+        data.put("accessTokenValiditySeconds", "120");
 
         if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            cookie.setSameSiteMode("Lax");
-            cookie.setPath("/");
-        } else {
-            cookie.setSameSiteMode("None");
-            cookie.setPath("/refresh");
-            cookie.setSecure(true);
+            data.put("emailOtp", emailOtp);
         }
 
-        exchange.setResponseCookie(cookie);
+        return new AuthResponse(201, data);
     }
 
-    public AuthSession createSessionFromCred(AuthCredential cred) {
-        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(),
-                "password", OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
+    public AuthResponse sendResetPwdToken(String email, String phone) {
+        Map<String, String> data = new HashMap<>();
 
-        authDao.sessionDao.insert(authSession);
-
-        return authSession;
-    }
-
-    // create server session: stores session in DB and Redis
-    void addSessionToRedis(AuthSession authSession, String userId, String role) throws Exception {
-        // store in Redis: key refresh:<token> -> userId|profile
-        redis.putRefreshToken(authSession.getSessionToken(), authSession.getId().toString(),
-                authSession.getCredId().toString(), userId, role,
-                Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
-    }
-
-    // refresh access token flow
-    public void refresh(HttpServerExchange exchange) throws Exception {
-        Cookie refreshCookie = exchange.getRequestCookie("refresh_token");
-
-        if (refreshCookie == null) {
-            exchange.setStatusCode(400);
-            exchange.getResponseSender().send("{\"error\":\"missing_refresh_token\"}");
-            return;
+        Optional<AuthCredential> authCred;
+        try {
+            authCred = authDao.credDao.findByEmail(email);
+        } catch (SQLException e) {
+            logger.getCore().error(e.getMessage());
+            data.put("error", "internal server error");
+            return new AuthResponse(500, data);
         }
 
-        String refreshToken = refreshCookie.getValue();
+        if (authCred.isEmpty()) {
+            data.put("error", "email not registered");
+            return new AuthResponse(400, data);
+        }
 
-        // lookup redis
+        String resetOtp = OtpGenerator.generateSecureOtp(8);
+        mailer.send(email, "Reset Password Token:Finditnow", String.format("Your reset password token: <strong style=\"font-size:18px\">%s</strong>.<br>" + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>", resetOtp), true);
+
+        redis.setKey("resetOtp:" + email, resetOtp, Duration.ofMinutes(5).toSeconds());
+
+        data.put("message", "verification email resent");
+        data.put("tokenValiditySeconds", "300");
+
+        return new AuthResponse(200, data);
+    }
+
+    public AuthResponse verifyResetToken(String email, String phone, String token) {
+        Map<String, String> data = new HashMap<>();
+        String storedToken = redis.getKeyValue("resetOtp:" + email);
+
+        if (storedToken == null || !storedToken.equals(token)) {
+            data.put("error", "invalid_token");
+            return new AuthResponse(400, data);
+        }
+
+        redis.deleteKey("resetOtp:" + email);
+        redis.setKey("resetAllowed:" + email, String.valueOf(true), Duration.ofMinutes(2).toSeconds());
+
+        data.put("message", "token_verified");
+        return new AuthResponse(200, data);
+    }
+
+    public AuthResponse updatePassword(String credId, String newPassword) {
+        Map<String, String> data = new HashMap<>();
+
+        if (!PasswordUtil.checkPwdString(newPassword)) {
+            data.put("error", "password not in desired format");
+            return new AuthResponse(400, data);
+        }
+
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                Map<String, Object> updateFields = new HashMap<>();
+                updateFields.put("password_hash", PasswordUtil.hash(newPassword));
+
+                authDao.credDao.updateCredFieldsById(conn, UUID.fromString(credId), updateFields);
+
+                data.put("message", "password updated");
+                return new AuthResponse(200, data);
+            });
+        } catch (Exception e) {
+            logger.getCore().error(e.getMessage());
+            data.put("error", "internal server error");
+            return new AuthResponse(500, data);
+        }
+    }
+
+    public AuthResponse logout(String accessToken, String refreshToken) {
+        Map<String, String> data = new HashMap<>();
+
+        if (refreshToken != null) {
+            try {
+                transactionManager.executeInTransaction(conn -> {
+                    authDao.sessionDao.invalidateByToken(conn, refreshToken);
+                    return null;
+                });
+
+                redis.deleteRefreshToken(refreshToken);
+            } catch (Exception e) {
+                logger.getCore().warn("Failed to invalidate refresh token", e);
+            }
+        }
+
+        if (accessToken != null) {
+            try {
+                long ttlSeconds = jwt.getTokenRemainingTtlSeconds(accessToken);
+                if (ttlSeconds > 0) {
+                    redis.blacklistAccessToken(accessToken, ttlSeconds);
+                }
+            } catch (Exception e) {
+                logger.getCore().warn("Failed to blacklist access token during logout", e);
+            }
+        }
+
+        data.put("message", "logged out successfully");
+        return new AuthResponse(200, data);
+    }
+
+    public AuthResponse refresh(String refreshToken) {
+        Map<String, String> data = new HashMap<>();
         Map<String, String> info = redis.getRefreshToken(refreshToken);
 
         if (info == null) {
-            exchange.setStatusCode(401);
-            exchange.getResponseSender().send("{\"error\":\"invalid_refresh\"}");
-            return;
+            data.put("error", "invalid_refresh");
+            return new AuthResponse(401, data);
         }
 
-        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"),
-                info.get("profile"));
+        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"), info.get("profile"));
 
-        Map<String, String> resp = new HashMap<>();
+        data.put("accessToken", newAccess);
+        data.put("profile", info.get("profile"));
 
-        resp.put("accessToken", newAccess);
-        resp.put("profile", info.get("profile"));
-        exchange.getResponseSender().send(mapper.writeValueAsString(resp));
+        return new AuthResponse(200, data);
     }
 
-    // used by OAuth service to find or create user by email
-    public AuthCredential findOrCreateUserByEmail(String email) throws Exception {
-        Optional<AuthCredential> u = authDao.credDao.findByEmail(email);
+    public AuthSession createSessionFromCred(AuthCredential cred, String sessionMethod) throws Exception {
+        return transactionManager.executeInTransaction(conn -> {
+            AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), sessionMethod, // or pass as parameter to distinguish oauth vs password
+                    OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
 
-        if (u.isPresent()) {
-            return u.get();
-        }
-        UUID id = UUID.randomUUID();
-        AuthCredential cred = new AuthCredential();
-        cred.setId(id);
-        cred.setEmailVerified(true);
-        cred.setEmail(email);
-        authDao.credDao.insert(cred);
-        return cred;
+            authDao.sessionDao.insert(conn, authSession);
+            return authSession;
+        });
     }
-
-    public AuthCredential findCredByEmail(String email) {
-        Optional<AuthCredential> dbCred = authDao.credDao.findByEmail(email);
-
-        if (dbCred.isEmpty()) {
-            return null;
-        }
-
-        return dbCred.get();
-    }
-
-    public AuthCredential createNewAuthCred(SignUpDto newAuth) {
-        UUID credId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
-
-        // if(!PasswordUtil.checkPwdString(password)) {
-        // exchange.setStatusCode(409);
-        // exchange.getResponseSender().send("{\"error\":\"password not in desired
-        // format\"}");
-        // return;
-        // }
-
-        String pwHash = PasswordUtil.hash(newAuth.getPassword());
-
-        AuthCredential cred = new AuthCredential(credId, userId, newAuth.getEmail(), newAuth.getPhone(), pwHash, newAuth.getPassword(), false, false, OffsetDateTime.now());
-        cred.setFirstName(newAuth.getFirstName());
-
-        authDao.credDao.insert(cred);
-        return cred;
-    }
-
-//    public AuthCredential findOrCreateCredByEmail(String email){
-//        AuthCredential cred = findCredByEmail(email);
-//
-//        if (email != null && cred != null) {
-//            if (cred.isEmailVerified()) {
-//                throw new CredentialException("user already verified");
-//            } else {
-//                Map<String, String> res = new HashMap<>();
-//                res.put("error", "account_not_verified");
-//                res.put("credId", authCred.getId().toString());
-//                exchange.setStatusCode(400);
-//                exchange.getResponseSender().send(mapper.writeValueAsString(res));
-//            }
-//
-//            return;
-//        }
-//    }
 }

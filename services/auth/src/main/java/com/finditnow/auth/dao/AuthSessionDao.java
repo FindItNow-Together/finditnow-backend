@@ -1,6 +1,5 @@
 package com.finditnow.auth.dao;
 
-
 import com.finditnow.auth.model.AuthSession;
 
 import javax.sql.DataSource;
@@ -14,55 +13,66 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class AuthSessionDao {
-
     private final DataSource dataSource;
 
     public AuthSessionDao(DataSource dataSource) {
         this.dataSource = dataSource;
     }
 
-
-    public Optional<AuthSession> findById(UUID id) {
-        return queryOne("SELECT * FROM auth_sessions WHERE id = ?", id);
-    }
-
-
-    public Optional<AuthSession> findBySessionToken(String token) {
-        return queryOne("SELECT * FROM auth_sessions WHERE session_token = ?", token);
-    }
-
-
-    public List<AuthSession> findActiveSessionsByCred(UUID credId) {
-        String sql = "SELECT * FROM auth_sessions WHERE cred_id = ? AND is_valid = TRUE AND expires_at > NOW()";
-        List<AuthSession> results = new ArrayList<>();
-
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setObject(1, credId);
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-                results.add(mapRow(rs));
-            }
-
-            return results;
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+    // Read-only methods
+    public Optional<AuthSession> findById(UUID id) throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return findById(conn, id);
         }
     }
 
+    public Optional<AuthSession> findBySessionToken(String token) throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return findBySessionToken(conn, token);
+        }
+    }
 
-    public void insert(AuthSession s) {
+    public List<AuthSession> findActiveSessionsByCred(UUID credId) throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            return findActiveSessionsByCred(conn, credId);
+        }
+    }
+
+    // Transactional methods
+    public Optional<AuthSession> findById(Connection conn, UUID id) throws SQLException {
+        return queryOne(conn, "SELECT * FROM auth_sessions WHERE id = ?", id);
+    }
+
+    public Optional<AuthSession> findBySessionToken(Connection conn, String token) throws SQLException {
+        return queryOne(conn, "SELECT * FROM auth_sessions WHERE session_token = ?", token);
+    }
+
+    public List<AuthSession> findActiveSessionsByCred(Connection conn, UUID credId) throws SQLException {
+        String sql = "SELECT * FROM auth_sessions WHERE cred_id = ? AND is_valid = TRUE AND expires_at > NOW()";
+        List<AuthSession> results = new ArrayList<>();
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, credId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
+            }
+        }
+
+        return results;
+    }
+
+    public void insert(Connection conn, AuthSession s) throws SQLException {
         String sql = """
-                    INSERT INTO auth_sessions
-                    (id, cred_id, session_token, session_method, ip_address, user_agent, expires_at,
-                     is_valid, created_at, revoked_at)
-                    VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, NOW(), ?)
-                """;
+                INSERT INTO auth_sessions
+                (id, cred_id, session_token, session_method, ip_address, user_agent, 
+                 expires_at, is_valid, created_at, revoked_at)
+                VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, NOW(), ?)
+            """;
 
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, s.getId());
             ps.setObject(2, s.getCredId());
             ps.setString(3, s.getSessionToken());
@@ -74,98 +84,81 @@ public class AuthSessionDao {
             ps.setObject(9, s.getRevokedAt());
 
             ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
+    public String invalidate(Connection conn, UUID id) throws SQLException {
+        Optional<AuthSession> session = findById(conn, id);
 
-    public String invalidate(UUID id) {
-        Optional<AuthSession> session = findById(id);
-
-        if (session.isEmpty()) return null;
-
+        if (session.isEmpty()) {
+            return null;
+        }
 
         String sql = """
-                    UPDATE auth_sessions
-                    SET is_valid = FALSE, revoked_at = NOW()
-                    WHERE id = ?
-                """;
+                UPDATE auth_sessions
+                SET is_valid = FALSE, revoked_at = NOW()
+                WHERE id = ?
+            """;
 
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, id);
             ps.executeUpdate();
             return session.get().getSessionToken();
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
-
-    public void invalidateByToken(String token) {
+    public void invalidateByToken(Connection conn, String token) throws SQLException {
         String sql = """
-                    UPDATE auth_sessions
-                    SET is_valid = FALSE, revoked_at = NOW()
-                    WHERE session_token = ?
-                """;
+                UPDATE auth_sessions
+                SET is_valid = FALSE, revoked_at = NOW()
+                WHERE session_token = ?
+            """;
 
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, token);
             ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
-    public String[] invalidateAllByCredId(UUID credId) {
-        List<AuthSession> sessions = findActiveSessionsByCred(credId);
+    public String[] invalidateAllByCredId(Connection conn, UUID credId) throws SQLException {
+        List<AuthSession> sessions = findActiveSessionsByCred(conn, credId);
 
-        if (sessions.isEmpty()) return null;
-
-        String[] sessionTokens = new String[sessions.size()];
-        for (int i = 0; i < sessions.size(); i++) {
-            sessionTokens[i] = sessions.get(i).getSessionToken();
+        if (sessions.isEmpty()) {
+            return new String[0];
         }
+
+        String[] sessionTokens = sessions.stream()
+                .map(AuthSession::getSessionToken)
+                .toArray(String[]::new);
 
         String sql = "UPDATE auth_sessions SET is_valid = FALSE, revoked_at = NOW() WHERE cred_id = ?";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql);) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, credId);
             ps.executeUpdate();
-            return sessionTokens;
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
+
+        return sessionTokens;
     }
 
-
-    private void delete(UUID id) {
+    public void delete(Connection conn, UUID id) throws SQLException {
         String sql = "DELETE FROM auth_sessions WHERE id = ?";
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, id);
             ps.executeUpdate();
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
         }
     }
 
-
-    private Optional<AuthSession> queryOne(String sql, Object param) {
-        try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
-
+    // Helper methods
+    private Optional<AuthSession> queryOne(Connection conn, String sql, Object param) throws SQLException {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, param);
-            ResultSet rs = ps.executeQuery();
 
-            if (!rs.next()) return Optional.empty();
-            return Optional.of(mapRow(rs));
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRow(rs));
+            }
         }
     }
 

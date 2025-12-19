@@ -12,13 +12,12 @@ import java.util.Map;
 import java.util.Set;
 
 public class PathHandler implements HttpHandler {
-    private static final Logger logger = Logger.getLogger(PathHandler.class);
-    private static final Map<String, String> routeMap = new HashMap<>();
-    private static final Set<String> privateRoutes = new HashSet<>();
     public static final AttachmentKey<Long> REQUEST_START_TIME_KEY = AttachmentKey.create(Long.class);
     public static final AttachmentKey<String> AUTH_TOKEN = AttachmentKey.create(String.class);
     public static final AttachmentKey<Map<String, String>> SESSION_INFO = AttachmentKey.create(Map.class);
-
+    private static final Logger logger = Logger.getLogger(PathHandler.class);
+    private static final Map<String, String> routeMap = new HashMap<>();
+    private static final Set<String> privateRoutes = new HashSet<>();
     private static final JwtService jwt = new JwtService();
 
     static {
