@@ -26,7 +26,9 @@ public class AuthApp {
             RedisStore redis = RedisStore.getInstance();
             JwtService jwt = new JwtService();
             AuthDao authDao = new AuthDao(ds);
-            AuthController authController = new AuthController(authDao, redis, jwt);
+            AuthService authService = new AuthService(authDao, redis, jwt);
+            AuthController authController = new AuthController(authService, authDao, redis, jwt);
+
             OAuthService oauth = new OAuthService(authController, jwt);
             Scheduler.init();
             new HTTPServer(authController, oauth).start();

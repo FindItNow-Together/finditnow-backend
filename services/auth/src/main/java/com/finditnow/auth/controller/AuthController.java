@@ -2,9 +2,11 @@ package com.finditnow.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dao.AuthDao;
+import com.finditnow.auth.dto.SignUpDto;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
+import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
@@ -35,46 +37,43 @@ public class AuthController {
     private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
     private final ObjectMapper mapper = new ObjectMapper();
     private final AuthDao authDao;
+    private final AuthService authService;
     private final RedisStore redis;
     private final JwtService jwt;
 
     private final long refreshTokenMaxLifeSeconds = Duration.ofDays(7).toSeconds();
 
-    public AuthController(AuthDao authDao, RedisStore redis, JwtService jwt) {
+    public AuthController(AuthService authService, AuthDao authDao, RedisStore redis, JwtService jwt) {
         this.authDao = authDao;
         this.redis = redis;
         this.jwt = jwt;
+        this.authService = authService;
     }
 
     // signup with email + password
     public void signUp(HttpServerExchange exchange) throws Exception {
-        Map<String, String> req = getRequestBody(exchange);
-        String email = req.get("email");
-        String firstName = req.get("firstName");
-        String phone = req.get("phone");
-        String password = req.get("password");
-        String role = req.get("role");
+        SignUpDto signUpReq = getRequestBody(exchange, SignUpDto.class);
 
-        if ((email == null && phone == null) || password == null || firstName == null) {
+        if (!signUpReq.isValid()) {
             exchange.setStatusCode(400);
             exchange.getResponseSender().send("{\"error\":\"missing_fields\"}");
             return;
         }
 
-        if (role == null) {
-            role = "customer";
+        if (signUpReq.getRole() == null) {
+            signUpReq.setRole("customer");
         }
 
-        Optional<AuthCredential> authCred = authDao.credDao.findByEmail(email);
+        AuthCredential authCred = authService.findCredByEmail(signUpReq.getEmail());
 
-        if (email != null && authCred.isPresent()) {
+        if (signUpReq.getEmail() != null && authCred != null) {
             exchange.setStatusCode(409);
-            if (authCred.get().isEmailVerified()) {
+            if (authCred.isEmailVerified()) {
                 exchange.getResponseSender().send("{\"error\":\"user_verified\"}");
             } else {
                 Map<String, String> res = new HashMap<>();
                 res.put("error", "account_not_verified");
-                res.put("credId", authCred.get().getId().toString());
+                res.put("credId", authCred.getId().toString());
                 exchange.setStatusCode(400);
                 exchange.getResponseSender().send(mapper.writeValueAsString(res));
             }
@@ -82,27 +81,13 @@ public class AuthController {
             return;
         }
 
-        UUID credId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        AuthCredential newCred = authService.createNewAuthCred(signUpReq);
 
-        // if(!PasswordUtil.checkPwdString(password)) {
-        // exchange.setStatusCode(409);
-        // exchange.getResponseSender().send("{\"error\":\"password not in desired
-        // format\"}");
-        // return;
-        // }
-
-        String pwHash = PasswordUtil.hash(password);
-
-        AuthCredential cred = new AuthCredential(credId, userId, email, phone, pwHash, role, false, false, OffsetDateTime.now());
-        cred.setFirstName(firstName);
-        authDao.credDao.insert(cred);
-
-        String emailOtp = sendVerificationEmail(email, credId.toString());
+        String emailOtp = sendVerificationEmail(signUpReq.getEmail(), newCred.getId().toString());
 
         Map<String, String> resp = new HashMap<>();
 
-        resp.put("credId", credId.toString());
+        resp.put("credId", newCred.getId().toString());
         resp.put("message", "verification email sent");
 
         resp.put("accessTokenValiditySeconds", "120");

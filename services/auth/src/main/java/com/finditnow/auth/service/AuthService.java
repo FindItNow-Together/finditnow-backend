@@ -2,6 +2,9 @@ package com.finditnow.auth.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dao.AuthDao;
+import com.finditnow.auth.dto.SignUpDto;
+import com.finditnow.auth.exceptions.CredentialException;
+import com.finditnow.auth.exceptions.NoSuchCredentialException;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
@@ -568,4 +571,52 @@ public class AuthService {
         authDao.credDao.insert(cred);
         return cred;
     }
+
+    public AuthCredential findCredByEmail(String email) {
+        Optional<AuthCredential> dbCred = authDao.credDao.findByEmail(email);
+
+        if (dbCred.isEmpty()) {
+            return null;
+        }
+
+        return dbCred.get();
+    }
+
+    public AuthCredential createNewAuthCred(SignUpDto newAuth) {
+        UUID credId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        // if(!PasswordUtil.checkPwdString(password)) {
+        // exchange.setStatusCode(409);
+        // exchange.getResponseSender().send("{\"error\":\"password not in desired
+        // format\"}");
+        // return;
+        // }
+
+        String pwHash = PasswordUtil.hash(newAuth.getPassword());
+
+        AuthCredential cred = new AuthCredential(credId, userId, newAuth.getEmail(), newAuth.getPhone(), pwHash, newAuth.getPassword(), false, false, OffsetDateTime.now());
+        cred.setFirstName(newAuth.getFirstName());
+
+        authDao.credDao.insert(cred);
+        return cred;
+    }
+
+//    public AuthCredential findOrCreateCredByEmail(String email){
+//        AuthCredential cred = findCredByEmail(email);
+//
+//        if (email != null && cred != null) {
+//            if (cred.isEmailVerified()) {
+//                throw new CredentialException("user already verified");
+//            } else {
+//                Map<String, String> res = new HashMap<>();
+//                res.put("error", "account_not_verified");
+//                res.put("credId", authCred.getId().toString());
+//                exchange.setStatusCode(400);
+//                exchange.getResponseSender().send(mapper.writeValueAsString(res));
+//            }
+//
+//            return;
+//        }
+//    }
 }
