@@ -23,6 +23,8 @@ dependencies {
     implementation("org.postgresql:postgresql:42.7.8")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    // https://mvnrepository.com/artifact/org.projectlombok/lombok
+    implementation("org.projectlombok:lombok:1.18.42")
 
     // DB Migrations
     implementation("org.flywaydb:flyway-core:11.17.0")

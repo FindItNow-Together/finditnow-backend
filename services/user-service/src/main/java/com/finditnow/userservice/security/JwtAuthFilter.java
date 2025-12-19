@@ -1,14 +1,20 @@
 package com.finditnow.userservice.security;
 
-import com.finditnow.jwt.JwtService;
-import com.finditnow.redis.RedisStore;
-import jakarta.servlet.*;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.util.Map;
+
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
+import com.finditnow.jwt.JwtService;
+import com.finditnow.redis.RedisStore;
+
+import jakarta.servlet.Filter;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 
 @Component
 public class JwtAuthFilter implements Filter {
@@ -28,14 +34,12 @@ public class JwtAuthFilter implements Filter {
         HttpServletRequest req = (HttpServletRequest) request;
         String token = extractToken(req);
 
-        if (token == null) {
-            ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
-        boolean isBlackListed = redis.isAccessTokenBlacklisted(token);
-        if (isBlackListed) {
-            ((HttpServletResponse) response).setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        if (token == null || redis.isAccessTokenBlacklisted(token)) {
+            System.out.print("AUTHENTICATION INVALID TOKEN");
+            if (token != null) {
+                System.out.println(" >>>> " + token);
+            }
+            doFilter(request, response, chain);
             return;
         }
 
@@ -50,7 +54,8 @@ public class JwtAuthFilter implements Filter {
 
     private String extractToken(HttpServletRequest req) {
         String header = req.getHeader("Authorization");
-        if (header == null || !header.startsWith("Bearer ")) return null;
+        if (!StringUtils.hasText(header) || !header.startsWith("Bearer "))
+            return null;
         return header.substring(7);
     }
 }
