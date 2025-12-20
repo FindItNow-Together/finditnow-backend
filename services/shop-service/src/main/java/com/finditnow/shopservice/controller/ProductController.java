@@ -16,7 +16,6 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
 public class ProductController extends BaseController {
 
     private final ProductService productService;
@@ -25,7 +24,7 @@ public class ProductController extends BaseController {
         this.productService = productService;
     }
 
-    @PostMapping("/shops/{shopId}/products")
+    @PostMapping("/{shopId}/products")
     @PreAuthorize("hasRole('SHOP')")
     public ResponseEntity<ProductResponse> addProduct(
             @PathVariable Long shopId,
@@ -37,7 +36,7 @@ public class ProductController extends BaseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/shops/{shopId}/products")
+    @GetMapping("/{shopId}/products")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
         List<ProductResponse> products = productService.getProductsByShop(shopId);

@@ -12,7 +12,7 @@ message UserProfile {
   string id = 1;
   string email = 2;
   string name = 3;
-  string avatar_url = 4;
+  string role = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
 }
@@ -23,7 +23,7 @@ message CreateUserProfileRequest {
   string id = 1;
   string email = 2;
   string name = 3;
-  string avatar_url = 4;
+  string role = 4;
 }
 
 // ------------------------ Responses ------------------------

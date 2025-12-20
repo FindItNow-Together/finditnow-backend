@@ -136,6 +136,7 @@ cd $ROOT_DIR
 Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:auth:run"
 Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:user-service:bootRun"
 Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:shop-service:bootRun"
+Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:file-gateway:run"
 
 Write-Host ">>>Opened windows for both services."
 Write-Host ""

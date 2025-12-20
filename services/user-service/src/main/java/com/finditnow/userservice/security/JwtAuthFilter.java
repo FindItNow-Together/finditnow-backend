@@ -1,23 +1,21 @@
 package com.finditnow.userservice.security;
 
-import java.io.IOException;
-import java.util.Map;
-
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
-
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
-
-import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
 
 @Component
-public class JwtAuthFilter implements Filter {
+public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwt;
     private final RedisStore redis;
@@ -28,28 +26,25 @@ public class JwtAuthFilter implements Filter {
     }
 
     @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-
-        HttpServletRequest req = (HttpServletRequest) request;
-        String token = extractToken(req);
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        String token = extractToken(request);
 
         if (token == null || redis.isAccessTokenBlacklisted(token)) {
             System.out.print("AUTHENTICATION INVALID TOKEN");
             if (token != null) {
                 System.out.println(" >>>> " + token);
             }
-            doFilter(request, response, chain);
+            filterChain.doFilter(request, response);
             return;
         }
 
         Map<String, String> userInfo = jwt.parseTokenToUser(token);
 
         // Attach identity to request context
-        request.setAttribute("userId", userInfo.get("userId"));
+        request.setAttribute("userId",  UUID.fromString(userInfo.get("userId")));
         request.setAttribute("profile", userInfo.get("profile"));
 
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 
     private String extractToken(HttpServletRequest req) {

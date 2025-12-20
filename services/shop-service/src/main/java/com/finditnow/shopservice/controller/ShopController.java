@@ -25,7 +25,6 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 @RestController
-@RequestMapping("/api/v1/shops")
 @Validated
 public class ShopController extends BaseController {
 
@@ -35,7 +34,7 @@ public class ShopController extends BaseController {
         this.shopService = shopService;
     }
 
-    @PostMapping
+    @PostMapping("/add")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ShopResponse> registerShop(
             @Valid @RequestBody ShopRequest request,
@@ -67,7 +66,7 @@ public class ShopController extends BaseController {
      * 
      * @return ResponseEntity with list of all shops
      */
-    @GetMapping
+    @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ShopResponse>> getAllShops() {
         List<ShopResponse> shops = shopService.getAllShops();

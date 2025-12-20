@@ -25,6 +25,7 @@ public class UserAddress {
     private String state;
     private String country;
     private String postalCode;
+    private boolean isPrimary;
 
     // this is the concatenated human-readable string
     @Column(columnDefinition = "text")

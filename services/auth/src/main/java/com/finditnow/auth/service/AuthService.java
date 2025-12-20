@@ -315,7 +315,7 @@ public class AuthService {
 
         try {
             UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
-            var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName(cred.getFirstName()).build());
+            var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName(cred.getFirstName()).setRole(cred.getRole().toString()).build());
 
             if (!res.hasUser()) {
                 throw new RuntimeException("User profile creation failed");
