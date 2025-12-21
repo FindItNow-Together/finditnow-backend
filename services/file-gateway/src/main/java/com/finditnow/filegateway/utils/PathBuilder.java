@@ -8,6 +8,10 @@ public class PathBuilder {
         return domain + "/" + entityId + "/" + purpose + "/" + uuid + "." + ext;
     }
 
+    public static String build(String domain, String entityId, String purpose, String file) {
+        return domain + "/" + entityId + "/" + purpose + "/" + file;
+    }
+
     public static String fromExchange(HttpServerExchange exchange) {
         return exchange.getPathParameters().get("domain").getFirst() + "/" +
                 exchange.getPathParameters().get("entityId").getFirst() + "/" +

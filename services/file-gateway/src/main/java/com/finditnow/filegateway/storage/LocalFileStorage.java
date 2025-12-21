@@ -19,9 +19,14 @@ public class LocalFileStorage implements FileStorage {
 
         Files.createDirectories(target.getParent());
 
-        Path temp = Files.createTempFile("upload-", ".tmp");
-        Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
-        Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE);
+        Path temp = Files.createTempFile(target.getParent(), "upload-", ".tmp");
+        Files.copy(input, temp, StandardCopyOption.REPLACE_EXISTING);
+        Files.move(
+                temp,
+                target,
+                StandardCopyOption.ATOMIC_MOVE,
+                StandardCopyOption.REPLACE_EXISTING
+        );
     }
 
     @Override

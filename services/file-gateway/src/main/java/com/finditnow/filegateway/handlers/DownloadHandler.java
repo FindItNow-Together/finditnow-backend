@@ -18,13 +18,26 @@ public record DownloadHandler(FileStorage storage, RefreshTokenValidator session
 
         exchange.startBlocking();
 
-        String domain = exchange.getPathParameters().get("domain").getFirst();
+        String path = exchange.getRelativePath();
+        String[] segments = path.split("/");
+
+        // ["", "download", "{domain}", "{entityId}", "{purpose}", "{file}"]
+        if (segments.length < 6) {
+            exchange.setStatusCode(400);
+            exchange.getResponseSender().send("Invalid path: " + path);
+            return;
+        }
+
+        String domain = segments[2];
+        String entityId = segments[3];
+        String purpose = segments[4];
+        String file = segments[5];
 
         if (isPrivate(domain)) {
             sessionValidator.validate(exchange);
         }
 
-        String fileKey = PathBuilder.fromExchange(exchange);
+        String fileKey = PathBuilder.build(domain, entityId, purpose, file);
 
         if (!storage.exists(fileKey)) {
             exchange.setStatusCode(404);

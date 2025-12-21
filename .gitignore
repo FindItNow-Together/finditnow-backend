@@ -11,3 +11,4 @@ build
 # infra container host-mounted data (persisted data — do NOT commit)
 infra/data/
 infra/data/**
+services/file-gateway/data/**
