@@ -1,6 +1,7 @@
 package com.finditnow.userservice.security;
 
 import com.finditnow.jwt.JwtService;
+import com.finditnow.jwt.exceptions.JwtExpiredException;
 import com.finditnow.redis.RedisStore;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -38,19 +39,37 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        Map<String, String> userInfo = jwt.parseTokenToUser(token);
+        try {
+            Map<String, String> userInfo = jwt.parseTokenToUser(token);
 
-        // Attach identity to request context
-        request.setAttribute("userId",  UUID.fromString(userInfo.get("userId")));
-        request.setAttribute("profile", userInfo.get("profile"));
+            // Attach identity to request context
+            request.setAttribute("userId", UUID.fromString(userInfo.get("userId")));
+            request.setAttribute("profile", userInfo.get("profile"));
 
-        filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response);
+        } catch (JwtExpiredException e) {
+            sendUnauthorized(response, "token_expired");
+        } catch (ServletException e) {
+            sendUnauthorized(response, "unauthorized");
+        }
     }
 
     private String extractToken(HttpServletRequest req) {
         String header = req.getHeader("Authorization");
-        if (!StringUtils.hasText(header) || !header.startsWith("Bearer "))
-            return null;
+        if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) return null;
         return header.substring(7);
+    }
+
+    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
+
+        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setContentType("application/json");
+
+        response.getWriter().write("""
+                {
+                  "success": false,
+                  "error": "%s"
+                }
+                """.formatted(message));
     }
 }

@@ -31,7 +31,7 @@ public class UserAddressService {
         User user = userDao.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
 
         UserAddress address = userAddressMapper.toEntity(addressDto);
-        address.setId(UUID.randomUUID());
+
         address.setUser(user);
 
         // full address

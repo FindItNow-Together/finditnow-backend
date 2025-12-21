@@ -2,7 +2,6 @@ package com.finditnow.filegateway;
 
 import com.finditnow.config.Config;
 import com.finditnow.filegateway.auth.RefreshTokenValidator;
-import com.finditnow.filegateway.handlers.CorsHandler;
 import com.finditnow.filegateway.handlers.DownloadHandler;
 import com.finditnow.filegateway.handlers.UploadHandler;
 import com.finditnow.filegateway.storage.FileStorage;
@@ -48,11 +47,9 @@ public class FileGatewayApp {
         HttpHandler formHandler =
                 new EagerFormParsingHandler(formParserFactory).setNext(routes);
 
-        CorsHandler handler = new CorsHandler(formHandler);
-
         Undertow server = Undertow.builder()
                 .addHttpListener(Integer.parseInt(Config.get("FILE_GATEWAY_SERVICE_PORT", "8090")), "localhost")
-                .setHandler(handler)
+                .setHandler(formHandler)
                 .build();
 
         server.start();

@@ -2,10 +2,8 @@ package com.finditnow.auth.server;
 
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
-import com.finditnow.auth.handlers.CorsHandler;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.handlers.RouteHandler;
-import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.config.Config;
 import io.undertow.Undertow;
@@ -35,7 +33,7 @@ public class HTTPServer {
             }
         };
 
-        Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(new CorsHandler(root)).build();
+        Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(root).build();
 
         server.start();
         logger.getCore().info("Auth Server started on port: {}", httpPort);

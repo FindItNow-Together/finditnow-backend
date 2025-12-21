@@ -2,6 +2,8 @@ package com.finditnow.auth.handlers;
 
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.jwt.JwtService;
+import com.finditnow.jwt.exceptions.JwtExpiredException;
+import com.finditnow.jwt.exceptions.JwtInvalidException;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
@@ -37,6 +39,7 @@ public class PathHandler implements HttpHandler {
 
     static {
         privateRoutes.add("/updatepassword");
+        privateRoutes.add("/logout");
     }
 
     private final HttpHandler nextHandler;
@@ -89,7 +92,6 @@ public class PathHandler implements HttpHandler {
             return;
         }
 
-
         String expectedMethod = routeMap.get(route);
 
         if (!expectedMethod.equalsIgnoreCase(exchange.getRequestMethod().toString())) {
@@ -101,6 +103,7 @@ public class PathHandler implements HttpHandler {
 
         String token = null;
         Map<String, String> sessionInfo = null;
+
         if (privateRoutes.contains(route)) {
             String authHeader = exchange.getRequestHeaders().getFirst("Authorization");
 
@@ -114,21 +117,16 @@ public class PathHandler implements HttpHandler {
 
             try {
                 sessionInfo = jwt.parseTokenToUser(token);
-
-                if (sessionInfo == null || sessionInfo.get("isSessionExpired").equals("true")) {
-                    exchange.setStatusCode(401);
-                    exchange.getResponseSender().send("{\"error\":\"token_expired\"}");
-                    return;
-                }
-
-
-            } catch (Exception e) {
+            } catch (JwtExpiredException e) {
+                exchange.setStatusCode(401);
+                exchange.getResponseSender().send("{\"error\":\"token_expired\"}");
+                return;
+            } catch (JwtInvalidException e) {
+                logger.getCore().error("Invalid token received>>>{}  {}", token, e.getMessage());
                 exchange.setStatusCode(401);
                 exchange.getResponseSender().send("{\"error\":\"unauthorized\"}");
                 return;
             }
-
-
         }
 
         if (sessionInfo != null) {

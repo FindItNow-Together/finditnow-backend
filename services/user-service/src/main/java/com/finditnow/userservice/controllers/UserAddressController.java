@@ -21,7 +21,7 @@ public class UserAddressController {
 
     @PostMapping("/add")
     public ResponseEntity<ApiResponse<UserAddressDto>> createAddress(
-            @PathVariable UUID userId,
+            @RequestAttribute UUID userId,
             @Valid @RequestBody UserAddressDto addressDto) {
         UserAddressDto createdAddress = userAddressService.createAddress(userId, addressDto);
         return ResponseEntity.status(HttpStatus.CREATED)
