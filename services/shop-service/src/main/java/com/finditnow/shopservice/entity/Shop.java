@@ -1,20 +1,13 @@
 package com.finditnow.shopservice.entity;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 @Entity
 @Table(name = "shop")
@@ -59,6 +52,28 @@ public class Shop {
     private String deliveryOption;
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Product> products = new ArrayList<>();
+    private Set<ShopInventory> shopInventory = new HashSet<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    public void addProduct(Product product, int stock, Float price) {
+        boolean exists = shopInventory.stream().anyMatch(i -> i.getProduct().equals(product));
+
+        if (exists) {
+            throw new IllegalStateException("Product already exists in inventory");
+        }
+
+        ShopInventory newInventory = new ShopInventory();
+        newInventory.setProduct(product);
+        newInventory.setStock(stock);
+        newInventory.setPrice(price);
+        shopInventory.add(newInventory);
+    }
+
+    public void removeProduct(Product product) {
+        shopInventory.removeIf(i -> i.getProduct().equals(product));
+    }
 }
 

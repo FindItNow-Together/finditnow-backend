@@ -1,18 +1,16 @@
 package com.finditnow.shopservice.dto;
 
-import com.finditnow.shopservice.entity.Category;
+import com.finditnow.shopservice.entity.CategoryType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
-public class ProductResponse {
+@NoArgsConstructor
+public class CategoryResponse {
     private Long id;
     private String name;
     private String description;
-    private Category category;
     private String imageUrl;
+    private CategoryType type;
 }
-
