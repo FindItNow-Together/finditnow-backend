@@ -52,8 +52,8 @@ public class AuthOauthGoogleDao {
     public void insert(Connection conn, AuthOauthGoogle o) throws SQLException {
         String sql = """
                 INSERT INTO auth_oauth_google
-                (id, user_id, google_user_id, email, access_token, refresh_token, created_at, last_login)
-                VALUES (?, ?, ?, ?, ?, ?, NOW(), ?)
+                (id, user_id, google_user_id, email, created_at)
+                VALUES (?, ?, ?, ?, NOW())
             """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -61,34 +61,7 @@ public class AuthOauthGoogleDao {
             ps.setObject(2, o.getUserId());
             ps.setString(3, o.getGoogleUserId());
             ps.setString(4, o.getEmail());
-            ps.setString(5, o.getAccessToken());
-            ps.setString(6, o.getRefreshToken());
-            ps.setObject(7, o.getLastLogin());
 
-            ps.executeUpdate();
-        }
-    }
-
-    public void updateTokens(Connection conn, UUID id, String accessToken, String refreshToken) throws SQLException {
-        String sql = """
-                UPDATE auth_oauth_google
-                SET access_token = ?, refresh_token = ?
-                WHERE id = ?
-            """;
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, accessToken);
-            ps.setString(2, refreshToken);
-            ps.setObject(3, id);
-            ps.executeUpdate();
-        }
-    }
-
-    public void updateLastLogin(Connection conn, UUID id) throws SQLException {
-        String sql = "UPDATE auth_oauth_google SET last_login = NOW() WHERE id = ?";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setObject(1, id);
             ps.executeUpdate();
         }
     }
@@ -122,10 +95,7 @@ public class AuthOauthGoogleDao {
         o.setUserId((UUID) rs.getObject("user_id"));
         o.setGoogleUserId(rs.getString("google_user_id"));
         o.setEmail(rs.getString("email"));
-        o.setAccessToken(rs.getString("access_token"));
-        o.setRefreshToken(rs.getString("refresh_token"));
         o.setCreatedAt(rs.getObject("created_at", java.time.OffsetDateTime.class));
-        o.setLastLogin(rs.getObject("last_login", java.time.OffsetDateTime.class));
         return o;
     }
 }

@@ -2,5 +2,6 @@ CREATE TYPE user_role AS ENUM (
     'admin',
     'customer',
     'shop',
-    'delivery_agent'
+    'delivery_agent',
+    'unassigned'
 );

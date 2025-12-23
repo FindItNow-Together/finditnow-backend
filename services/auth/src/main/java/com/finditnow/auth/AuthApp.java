@@ -30,7 +30,7 @@ public class AuthApp {
             AuthService authService = new AuthService(authDao, redis, jwt);
             AuthController authController = new AuthController(authService);
 
-            OAuthService oauth = new OAuthService(authService, jwt);
+            OAuthService oauth = new OAuthService(authService, redis, jwt);
             OauthController oauthController = new OauthController(oauth);
             Scheduler.init();
             new HTTPServer(authController, oauthController).start();

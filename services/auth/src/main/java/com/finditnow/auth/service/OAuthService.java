@@ -3,11 +3,16 @@ package com.finditnow.auth.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.model.AuthCredential;
+import com.finditnow.auth.model.AuthOauthGoogle;
 import com.finditnow.auth.model.AuthSession;
+import com.finditnow.auth.types.Role;
 import com.finditnow.auth.utils.Logger;
+import com.finditnow.config.Config;
 import com.finditnow.jwt.JwtService;
+import com.finditnow.redis.RedisStore;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -17,20 +22,33 @@ public class OAuthService {
     private final ObjectMapper mapper = new ObjectMapper();
     private final AuthService authService;
     private final JwtService jwt;
+    private final RedisStore redis;
 
-    public OAuthService(AuthService authService, JwtService jwt) {
+    public final String OAUTH_CLIENT_ID = Config.get("OAUTH_CLIENT_ID");
+    public final String OAUTH_CLIENT_SECRET = Config.get("OAUTH_CLIENT_SECRET");
+    public final String OAUTH_REDIRECT_URI = Config.get("OAUTH_REDIRECT_URI");
+
+    public OAuthService(AuthService authService, RedisStore redis, JwtService jwt) {
         this.authService = authService;
         this.jwt = jwt;
+        this.redis = redis;
+    }
+
+    public void saveOauthState(String state) {
+        redis.setKey("oauth_state" + state, "1", 15*60);
+    }
+
+    public boolean existsOauthState(String state) {
+        return "1".equals(redis.getKeyValue("oauth_state" + state));
     }
 
     /**
      * Handles Google OAuth authentication flow
      *
      * @param idToken     The Google ID token from the client
-     * @param authProfile The user profile/role (customer, vendor, etc.)
      * @return AuthResponse containing access_token and refresh_token
      */
-    public AuthResponse handleGoogleAuth(String idToken, String authProfile) {
+    public AuthResponse handleGoogleAuth(String idToken) {
         Map<String, String> data = new HashMap<>();
 
         // Decode and validate the Google ID token
@@ -40,17 +58,34 @@ public class OAuthService {
             return new AuthResponse(401, data);
         }
 
+        Boolean emailVerified = (Boolean) payload.get("email_verified");
+        if (emailVerified == null || !emailVerified) {
+            data.put("error", "email_not_verified");
+            return new AuthResponse(401, data);
+        }
+
+        String sub = (String) payload.get("sub");
+
+        if (sub == null || sub.isEmpty()) {
+            data.put("error", "invalid_id_token");
+            return new AuthResponse(401, data);
+        }
+
         String email = (String) payload.get("email");
         String name = (String) payload.getOrDefault("name", "");
 
         try {
             // Find or create user account
-            AuthCredential cred = authService.findOrCreateUserByEmail(email);
+            AuthCredential cred = authService.findCredentialByAuthProvider(sub);
 
+            if(cred==null){
+                cred = authService.findOrCreateCredWithOauth(sub, email);
+            }
             // Use provided profile or fall back to existing user role
-            String profile = (authProfile != null && !authProfile.isEmpty())
-                    ? authProfile
-                    : cred.getRole().toString();
+            String profile =
+                    cred.getRole() != null
+                            ? cred.getRole().toString()
+                            : "UNASSIGNED";
 
             // Create authentication session
             AuthSession authSession = authService.createSessionFromCred(cred, "oauth");
@@ -130,7 +165,24 @@ public class OAuthService {
                     StandardCharsets.UTF_8
             );
 
-            return mapper.readValue(payloadJson, Map.class);
+            Map<String, Object> payload = mapper.readValue(payloadJson, Map.class);
+
+            if (!"https://accounts.google.com".equals(payload.get("iss"))) {
+                throw new SecurityException("Invalid issuer");
+            }
+
+            if (!OAUTH_CLIENT_ID.equals(payload.get("aud"))) {
+                throw new SecurityException("Invalid audience");
+            }
+
+            long exp = ((Number) payload.get("exp")).longValue();
+            long now = Instant.now().getEpochSecond();
+
+            if (exp < now) {
+                throw new SecurityException("Google Auth Token expired");
+            }
+
+            return payload;
         } catch (IllegalArgumentException e) {
             logger.getCore().warn("Invalid Base64 encoding in JWT", e);
             return null;

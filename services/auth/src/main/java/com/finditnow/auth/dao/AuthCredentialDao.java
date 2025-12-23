@@ -73,10 +73,25 @@ public class AuthCredentialDao {
         }
     }
 
+    public Optional<AuthCredential> findByOauthSubject(Connection conn, String oauthSubject) throws SQLException {
+        String sql = "SELECT ac.* FROM auth_credentials ac JOIN auth_oauth_google aog ON ac.user_id = aog.user_id WHERE aog.google_user_id=?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, oauthSubject);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapRow(rs));
+            }
+        }
+    }
+
     public void insert(Connection conn, AuthCredential c) throws SQLException {
         String sql = """
                 INSERT INTO auth_credentials
-                (id, user_id, email, first_name, phone, password_hash, role, 
+                (id, user_id, email, first_name, phone, password_hash, role,
                  is_email_verified, is_phone_verified, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
             """;

@@ -26,6 +26,11 @@ public class UserAddress {
     private String country;
     private String postalCode;
     private boolean isPrimary;
+    private double latitude;
+    private double longitude;
+
+    @Enumerated(EnumType.STRING)
+    private AddressType addressType;
 
     // this is the concatenated human-readable string
     @Column(columnDefinition = "text")

@@ -4,6 +4,7 @@ import com.finditnow.auth.dao.AuthDao;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.dto.SignUpDto;
 import com.finditnow.auth.model.AuthCredential;
+import com.finditnow.auth.model.AuthOauthGoogle;
 import com.finditnow.auth.model.AuthSession;
 import com.finditnow.auth.transaction.TransactionManager;
 import com.finditnow.auth.types.Role;
@@ -263,23 +264,7 @@ public class AuthService {
                 }
 
                 // Create new credential for OAuth
-                UUID id = UUID.randomUUID();
-                UUID userId = UUID.randomUUID();
-                AuthCredential cred = new AuthCredential();
-                cred.setId(id);
-                cred.setUserId(userId);
-                cred.setEmailVerified(true);
-                cred.setEmail(email);
-                cred.setRole(Role.CUSTOMER);
-
-                authDao.credDao.insert(conn, cred);
-
-                // Create user profile
-                try {
-                    createUserProfile(cred);
-                } catch (Exception e) {
-                    logger.getCore().warn("Failed to create user profile for OAuth user", e);
-                }
+                AuthCredential cred = createCredentialFromEmail(email, conn);
 
                 return cred;
             });
@@ -287,6 +272,62 @@ public class AuthService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to find or create user", e);
         }
+    }
+
+    public AuthCredential findCredentialByAuthProvider(String oauthSub) {
+        try {
+            return transactionManager.executeInTransaction(conn -> authDao.credDao.findByOauthSubject(conn, oauthSub).orElse(null));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to credential by oauth subject", e);
+        }
+    }
+
+    /**
+     * @param oauthSub subject for the oauth provider unique
+     * @param email email used for the authentication
+     * @return AuthCredential newly created
+     */
+    public AuthCredential findOrCreateCredWithOauth(String oauthSub, String email) {
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                AuthCredential cred = createCredentialFromEmail(email, conn);
+
+                AuthOauthGoogle authGoogleRecord = new AuthOauthGoogle();
+                authGoogleRecord.setId(UUID.randomUUID());
+                authGoogleRecord.setGoogleUserId(oauthSub);
+                authGoogleRecord.setEmail(email);
+                authGoogleRecord.setUserId(cred.getUserId());
+
+                authDao.oauthDao.insert(conn, authGoogleRecord);
+
+                return cred;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to find or create user", e);
+        }
+    }
+
+    private AuthCredential createCredentialFromEmail(String email, Connection conn) throws SQLException {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        AuthCredential cred = new AuthCredential();
+        cred.setId(id);
+        cred.setUserId(userId);
+        cred.setEmailVerified(true);
+        cred.setFirstName(email);
+        cred.setEmail(email);
+        cred.setRole(Role.UNASSIGNED);
+
+        authDao.credDao.insert(conn, cred);
+
+        // Create user profile
+        try {
+            createUserProfile(cred);
+        } catch (Exception e) {
+            logger.getCore().warn("Failed to create user profile for OAuth user", e);
+        }
+
+        return cred;
     }
 
     // Helper methods

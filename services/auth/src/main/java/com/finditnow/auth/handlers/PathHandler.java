@@ -27,6 +27,8 @@ public class PathHandler implements HttpHandler {
         routeMap.put("/signup", "POST");
         routeMap.put("/verifyemail", "POST");
         routeMap.put("/resendverificationemail", "POST");
+        routeMap.put("/oauth/google", "GET");
+        routeMap.put("/oauth/google/callback", "GET");
         routeMap.put("/oauth/google/signin", "POST");
         routeMap.put("/refresh", "POST");
         routeMap.put("/logout", "POST");

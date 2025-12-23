@@ -2,7 +2,6 @@ package com.finditnow.auth.handlers;
 
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
-import com.finditnow.auth.service.OAuthService;
 import com.finditnow.auth.utils.Logger;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
@@ -33,9 +32,14 @@ public class RouteHandler implements HttpHandler {
             case "/resendverificationemail":
                 authController.resendVerificationEmail(exchange);
                 break;
-            case "/oauth/google/signin":
-                oauthController.handleGoogle(exchange);
-                break;
+            case "/oauth/google":
+                oauthController.redirectToGoogle(exchange);
+
+            case "/oauth/google/callback":
+                oauthController.authorizeGoogleResponse(exchange);
+//            case "/oauth/google/signin":
+//                oauthController.handleGoogle(exchange);
+//                break;
             case "/refresh":
                 authController.refresh(exchange);
                 break;

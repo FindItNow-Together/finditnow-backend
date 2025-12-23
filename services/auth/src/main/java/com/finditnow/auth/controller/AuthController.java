@@ -16,13 +16,12 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
 
-public class AuthController {
+public class AuthController extends BaseController{
     private static final Logger logger = Logger.getLogger(AuthController.class);
-    private final ObjectMapper mapper = new ObjectMapper();
     private final AuthService authService;
-    private final long refreshTokenMaxLifeSeconds = Duration.ofDays(7).toSeconds();
 
     public AuthController(AuthService authService) {
+        super();
         this.authService = authService;
     }
 
@@ -199,48 +198,5 @@ public class AuthController {
         String refreshToken = refreshCookie.getValue();
         AuthResponse response = authService.refresh(refreshToken);
         sendResponse(exchange, response.statusCode(), response.data());
-    }
-
-    // Helper methods for HTTP concerns
-    private Map<String, String> getRequestBody(HttpServerExchange exchange) throws IOException {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        return mapper.readValue(body, Map.class);
-    }
-
-    private <T> T getRequestBody(HttpServerExchange exchange, Class<T> clazz) throws IOException {
-        String body = new String(exchange.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-        return mapper.readValue(body, clazz);
-    }
-
-    private void sendResponse(HttpServerExchange exchange, int statusCode, Map<String, String> data) throws IOException {
-        exchange.setStatusCode(statusCode);
-        exchange.getResponseSender().send(mapper.writeValueAsString(data));
-    }
-
-    private void sendError(HttpServerExchange exchange, int statusCode, String error) throws IOException {
-        exchange.setStatusCode(statusCode);
-        exchange.getResponseSender().send("{\"error\":\"" + error + "\"}");
-    }
-
-    private void setRefreshCookie(HttpServerExchange exchange, String token, boolean isExpired) {
-        CookieImpl cookie = new CookieImpl("refresh_token", token);
-        cookie.setHttpOnly(true);
-
-        if (isExpired) {
-            cookie.setMaxAge(0);
-        } else {
-            cookie.setMaxAge((int) refreshTokenMaxLifeSeconds);
-        }
-
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
-            cookie.setSameSiteMode("Lax");
-            cookie.setPath("/");
-        } else {
-            cookie.setSameSiteMode("None");
-            cookie.setPath("/refresh");
-            cookie.setSecure(true);
-        }
-
-        exchange.setResponseCookie(cookie);
     }
 }

@@ -22,10 +22,7 @@ public class AuthOauthGoogle {
     private UUID userId;
     private String googleUserId;
     private String email;
-    private String accessToken;
-    private String refreshToken;
     private OffsetDateTime createdAt;
-    private OffsetDateTime lastLogin;
 
     public AuthOauthGoogle() {
     }
@@ -37,10 +34,7 @@ public class AuthOauthGoogle {
         this.userId = userId;
         this.googleUserId = googleUserId;
         this.email = email;
-        this.accessToken = accessToken;
-        this.refreshToken = refreshToken;
         this.createdAt = createdAt;
-        this.lastLogin = lastLogin;
     }
 
     public UUID getId() {
@@ -75,22 +69,6 @@ public class AuthOauthGoogle {
         this.email = email;
     }
 
-    public String getAccessToken() {
-        return accessToken;
-    }
-
-    public void setAccessToken(String accessToken) {
-        this.accessToken = accessToken;
-    }
-
-    public String getRefreshToken() {
-        return refreshToken;
-    }
-
-    public void setRefreshToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
     public OffsetDateTime getCreatedAt() {
         return createdAt;
     }
@@ -99,12 +77,5 @@ public class AuthOauthGoogle {
         this.createdAt = createdAt;
     }
 
-    public OffsetDateTime getLastLogin() {
-        return lastLogin;
-    }
-
-    public void setLastLogin(OffsetDateTime lastLogin) {
-        this.lastLogin = lastLogin;
-    }
 }
 
