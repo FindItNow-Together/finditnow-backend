@@ -17,6 +17,7 @@ import com.finditnow.jwt.JwtService;
 import com.finditnow.mail.MailService;
 import com.finditnow.redis.RedisStore;
 import com.finditnow.user.CreateUserProfileRequest;
+import com.finditnow.user.UpdateUserRoleRequest;
 import com.finditnow.user.UserServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -201,6 +202,28 @@ public class AuthService {
         }
     }
 
+    public AuthResponse updateRoleByCredential(UUID credId, String userId, String role) {
+        Map<String, Object> toUpdate = new HashMap<>();
+        toUpdate.put("role", role);
+        Map<String, String> resp = new HashMap<>();
+
+        try {
+            transactionManager.executeInTransaction(conn -> {
+                authDao.credDao.updateCredFieldsById(conn, credId, toUpdate);
+                return credId;
+            });
+
+            resp.put("message", "role_updated");
+
+            updateUserRole(userId, role);
+            return new AuthResponse(201, resp);
+        } catch (Exception e) {
+            logger.getCore().error("Failed to update role", e);
+            resp.put("error", "internal_server_error");
+            return new AuthResponse(500, resp);
+        }
+    }
+
     public AuthResponse signIn(String identifier, String password) {
         Map<String, String> data = new HashMap<>();
 
@@ -284,7 +307,7 @@ public class AuthService {
 
     /**
      * @param oauthSub subject for the oauth provider unique
-     * @param email email used for the authentication
+     * @param email    email used for the authentication
      * @return AuthCredential newly created
      */
     public AuthCredential findOrCreateCredWithOauth(String oauthSub, String email) {
@@ -360,6 +383,21 @@ public class AuthService {
 
             if (!res.hasUser()) {
                 throw new RuntimeException("User profile creation failed");
+            }
+        } finally {
+            channel.shutdown();
+        }
+    }
+
+    private void updateUserRole(String userId, String role) {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"), Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
+
+        try {
+            UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
+            var res = stub.updateUserRole(UpdateUserRoleRequest.newBuilder().setId(userId).setRole(role).build());
+
+            if (!res.hasError()) {
+                throw new RuntimeException("User role update failed for id " + userId);
             }
         } finally {
             channel.shutdown();

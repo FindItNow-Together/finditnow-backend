@@ -1,6 +1,7 @@
 package com.finditnow.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.config.Config;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.CookieImpl;
@@ -19,6 +20,11 @@ public abstract class BaseController {
     public Map<String, String> getRequestBody(HttpServerExchange exchange) throws IOException {
         String body = new String(exchange.getInputStream().readAllBytes(), UTF_8);
         return mapper.readValue(body, Map.class);
+    }
+
+    protected void sendCommonResponse(HttpServerExchange exchange, AuthResponse resp) throws IOException {
+        exchange.setStatusCode(resp.statusCode());
+        exchange.getResponseSender().send(mapper.writeValueAsString(resp.data()));
     }
 
     protected void sendResponse(HttpServerExchange exchange, int statusCode, Map<String, String> data) throws IOException {

@@ -1,22 +1,18 @@
 package com.finditnow.auth.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.dto.SignUpDto;
 import com.finditnow.auth.handlers.PathHandler;
 import com.finditnow.auth.service.AuthService;
+import com.finditnow.auth.types.Role;
 import com.finditnow.auth.utils.Logger;
-import com.finditnow.config.Config;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
-import io.undertow.server.handlers.CookieImpl;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.Map;
+import java.util.UUID;
 
-public class AuthController extends BaseController{
+public class AuthController extends BaseController {
     private static final Logger logger = Logger.getLogger(AuthController.class);
     private final AuthService authService;
 
@@ -146,6 +142,25 @@ public class AuthController extends BaseController{
 
         AuthResponse response = authService.updatePassword(credId, newPassword);
         sendResponse(exchange, response.statusCode(), response.data());
+    }
+
+    public void updateRole(HttpServerExchange exchange) throws Exception {
+        Map<String, String> bodyMap = getRequestBody(exchange);
+
+        String role = bodyMap.get("role");
+        if (role == null || role.isEmpty()) {
+            sendError(exchange, 400, "role_required");
+            return;
+        }
+
+        Role roleCheck = Role.valueOf(role);
+
+        Map<String, String> authInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
+        String credId = authInfo.get("credId");
+
+        AuthResponse resp = authService.updateRoleByCredential(UUID.fromString(credId), authInfo.get("userId"), role);
+
+        sendCommonResponse(exchange, resp);
     }
 
     public void signIn(HttpServerExchange exchange) throws Exception {
