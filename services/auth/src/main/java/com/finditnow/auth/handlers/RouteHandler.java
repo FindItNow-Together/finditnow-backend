@@ -56,6 +56,9 @@ public class RouteHandler implements HttpHandler {
             case "/resetpassword":
                 authController.resetPassword(exchange);
                 break;
+            case "/updaterole":
+                authController.updateRole(exchange);
+                break;
             case "/updatepassword":
                 authController.updatePassword(exchange);
                 break;

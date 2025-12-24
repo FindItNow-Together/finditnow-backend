@@ -209,13 +209,15 @@ public class AuthService {
 
         try {
             transactionManager.executeInTransaction(conn -> {
-                authDao.credDao.updateCredFieldsById(conn, credId, toUpdate);
+                AuthCredential cred = authDao.credDao.findById(credId).orElseThrow(()-> new RuntimeException("Credential not found"));
+
+                cred.setRole(Role.valueOf(role));
+                authDao.credDao.update(conn, cred);
                 return credId;
             });
 
-            resp.put("message", "role_updated");
-
             updateUserRole(userId, role);
+            resp.put("message", "role_updated");
             return new AuthResponse(201, resp);
         } catch (Exception e) {
             logger.getCore().error("Failed to update role", e);

@@ -35,12 +35,14 @@ public class PathHandler implements HttpHandler {
         routeMap.put("/sendresettoken", "POST");
         routeMap.put("/verifyresettoken", "GET");
         routeMap.put("/resetpassword", "PUT");
+        routeMap.put("/updaterole", "PUT");
         routeMap.put("/updatepassword", "PUT");
         routeMap.put("/health", "GET");
     }
 
     static {
         privateRoutes.add("/updatepassword");
+        privateRoutes.add("/updaterole");
         privateRoutes.add("/logout");
     }
 
