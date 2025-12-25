@@ -1,14 +1,80 @@
-# Ignore Gradle project-specific cache directory
-.gradle
+# ==========================================
+# Java & Gradle
+# ==========================================
+.gradle/
+build/
+**/build/
+bin/
+*.class
+*.jar
+*.war
+*.ear
 
-# Ignore Gradle build output directory
-build
+# EXCEPT for the Gradle Wrapper (KEEP THESE)
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+!gradlew
+!gradlew.bat
 
-**/.env
+# Use this if you want to exclude the Gradle wrapper from the repo (optional)
+# !gradle/wrapper/gradle-wrapper.jar
 
-.idea
+# ==========================================
+# Environment & Secrets (CRITICAL)
+# ==========================================
+# Ignore all .env files
+.env
+.env.*
 
-# infra container host-mounted data (persisted data — do NOT commit)
+# DO NOT ignore .env.example files
+!**/.env.example
+secrets.properties
+**/tokens.json
+**/credentials.json
+
+# ==========================================
+# Infrastructure & Persisted Data
+# ==========================================
+# Explicitly ignoring your data directories
 infra/data/
-infra/data/**
-services/file-gateway/data/**
+services/file-gateway/data/
+**/data/storage/
+*.log
+*.db
+*.sqlite
+
+# Docker / Container specific
+.docker/
+**/postgres-data/
+**/redis-data/
+
+# ==========================================
+# IDE Specific Files
+# ==========================================
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Eclipse
+.settings/
+.classpath
+.project
+.factorypath
+
+# ==========================================
+# OS / System Files
+# ==========================================
+.DS_Store
+Thumbs.db
+desktop.ini
