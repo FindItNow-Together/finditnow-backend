@@ -398,8 +398,8 @@ public class AuthService {
             UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
             var res = stub.updateUserRole(UpdateUserRoleRequest.newBuilder().setId(userId).setRole(role).build());
 
-            if (!res.hasError()) {
-                throw new RuntimeException("User role update failed for id " + userId);
+            if (res.hasError()) {
+                throw new RuntimeException("User role update failed for id " + userId + "Reason==>" + res.getError());
             }
         } finally {
             channel.shutdown();
