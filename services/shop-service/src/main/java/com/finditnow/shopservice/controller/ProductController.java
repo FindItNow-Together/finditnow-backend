@@ -15,22 +15,20 @@ import java.util.UUID;
 
 @RestController
 public class ProductController extends BaseController {
-
     private final ProductService productService;
 
     public ProductController(ProductService productService) {
         this.productService = productService;
     }
 
-    @PostMapping("/{shopId}/products")
-    @PreAuthorize("hasRole('SHOP')")
+    @PostMapping("/products")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ProductResponse> addProduct(
-            @PathVariable Long shopId,
             @Valid @RequestBody ProductRequest request,
             Authentication authentication) {
 
         UUID userId = extractUserId(authentication);
-        ProductResponse response = productService.addProduct(shopId, request, userId);
+        ProductResponse response = productService.addProduct(request, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -45,33 +43,24 @@ public class ProductController extends BaseController {
     @PreAuthorize("hasRole('SHOP')")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
-            @Valid @RequestBody ProductRequest request,
-            Authentication authentication) {
-
-        UUID userId = extractUserId(authentication);
-        ProductResponse response = productService.updateProduct(id, request, userId);
+            @Valid @RequestBody ProductRequest request) {
+        ProductResponse response = productService.updateProduct(id, request);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/products/{id}")
     @PreAuthorize("hasRole('SHOP')")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable Long id,
-            Authentication authentication) {
-
-        UUID userId = extractUserId(authentication);
-        productService.deleteProduct(id, userId);
+            @PathVariable Long id) {
+        productService.deleteProduct(id);
         return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/products/bulk")
     @PreAuthorize("hasRole('SHOP')")
     public ResponseEntity<Void> deleteProducts(
-            @RequestBody List<Long> productIds,
-            Authentication authentication) {
-
-        UUID userId = extractUserId(authentication);
-        productService.deleteProducts(productIds, userId);
+            @RequestBody List<Long> productIds) {
+        productService.deleteProducts(productIds);
         return ResponseEntity.noContent().build();
     }
 }

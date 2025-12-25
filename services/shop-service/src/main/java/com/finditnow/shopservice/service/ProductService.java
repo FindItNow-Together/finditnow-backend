@@ -32,7 +32,7 @@ public class ProductService {
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public ProductResponse addProduct(Long shopId, ProductRequest request, UUID ownerId) {
+    public ProductResponse addProduct(ProductRequest request, UUID ownerId) {
         Category cat = resolveCategory(request);
         Product product = new Product();
         product.setName(request.getName());
@@ -56,7 +56,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId) {
+    public ProductResponse updateProduct(Long productId, ProductRequest request) {
         Product product = productRepository.findById(productId).orElseThrow(() -> {
             // Check if product exists at all
             if (!productRepository.existsById(productId)) {
@@ -76,7 +76,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long productId, UUID ownerId) {
+    public void deleteProduct(Long productId) {
         Product product = productRepository.findById(productId).orElseThrow(() -> {
             // Check if product exists at all
             if (!productRepository.existsById(productId)) {
@@ -90,7 +90,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProducts(List<Long> productIds, UUID ownerId) {
+    public void deleteProducts(List<Long> productIds) {
         if (productIds == null || productIds.isEmpty()) {
             throw new IllegalArgumentException("Product IDs list cannot be empty");
         }

@@ -203,22 +203,18 @@ public class AuthService {
     }
 
     public AuthResponse updateRoleByCredential(UUID credId, String userId, String role) {
-        Map<String, Object> toUpdate = new HashMap<>();
-        toUpdate.put("role", role);
         Map<String, String> resp = new HashMap<>();
 
         try {
-            transactionManager.executeInTransaction(conn -> {
+            return transactionManager.executeInTransaction(conn -> {
                 AuthCredential cred = authDao.credDao.findById(credId).orElseThrow(()-> new RuntimeException("Credential not found"));
 
                 cred.setRole(Role.valueOf(role));
                 authDao.credDao.update(conn, cred);
-                return credId;
+                updateUserRole(userId, role);
+                resp.put("message", "role_updated");
+                return new AuthResponse(201, resp);
             });
-
-            updateUserRole(userId, role);
-            resp.put("message", "role_updated");
-            return new AuthResponse(201, resp);
         } catch (Exception e) {
             logger.getCore().error("Failed to update role", e);
             resp.put("error", "internal_server_error");
