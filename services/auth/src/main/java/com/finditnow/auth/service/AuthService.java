@@ -243,6 +243,11 @@ public class AuthService {
                     return new AuthResponse(403, data);
                 }
 
+                if(cred.getPasswordHash() ==null){
+                    data.put("message", "Password not found, either set it or use google based login");
+                    return new AuthResponse(403, data);
+                }
+
                 if (!PasswordUtil.verifyPassword(password, cred.getPasswordHash())) {
                     data.put("error", "invalid credentials");
                     return new AuthResponse(401, data);
@@ -295,6 +300,14 @@ public class AuthService {
         }
     }
 
+    public AuthCredential findCredentialByEmail(String email){
+        try{
+            return authDao.credDao.findByEmail(email).orElse(null);
+        }catch (Exception e){
+            throw new RuntimeException("Failed to find credential by email", e);
+        }
+    }
+
     public AuthCredential findCredentialByAuthProvider(String oauthSub) {
         try {
             return transactionManager.executeInTransaction(conn -> authDao.credDao.findByOauthSubject(conn, oauthSub).orElse(null));
@@ -322,6 +335,24 @@ public class AuthService {
                 authDao.oauthDao.insert(conn, authGoogleRecord);
 
                 return cred;
+            });
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to find or create user", e);
+        }
+    }
+
+    public AuthOauthGoogle createOauthByExistingCred(String oauthSub, String email, UUID userId) {
+        try {
+            return transactionManager.executeInTransaction(conn -> {
+                AuthOauthGoogle authGoogleRecord = new AuthOauthGoogle();
+                authGoogleRecord.setId(UUID.randomUUID());
+                authGoogleRecord.setGoogleUserId(oauthSub);
+                authGoogleRecord.setEmail(email);
+                authGoogleRecord.setUserId(userId);
+
+                authDao.oauthDao.insert(conn, authGoogleRecord);
+
+                return authGoogleRecord;
             });
         } catch (Exception e) {
             throw new RuntimeException("Failed to find or create user", e);

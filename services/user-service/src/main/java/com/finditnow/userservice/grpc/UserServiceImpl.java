@@ -2,9 +2,7 @@ package com.finditnow.userservice.grpc;
 
 import com.finditnow.user.*;
 import com.finditnow.userservice.dao.UserDao;
-import com.finditnow.userservice.dto.UserDto;
 import com.finditnow.userservice.entity.User;
-import com.finditnow.userservice.service.UserService;
 import io.grpc.stub.StreamObserver;
 import org.springframework.stereotype.Service;
 

@@ -1,20 +1,18 @@
 package com.finditnow.shopservice.service;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
 import com.finditnow.shopservice.entity.Shop;
 import com.finditnow.shopservice.exception.ForbiddenException;
 import com.finditnow.shopservice.exception.NotFoundException;
 import com.finditnow.shopservice.repository.ShopRepository;
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor

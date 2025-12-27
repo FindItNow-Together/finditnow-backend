@@ -5,7 +5,6 @@ import com.finditnow.userservice.entity.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
-import org.springframework.stereotype.Component;
 
 import java.util.List;
 

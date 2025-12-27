@@ -1,10 +1,9 @@
 package com.finditnow.shopservice.controller;
 
-import java.util.UUID;
-
+import com.finditnow.shopservice.exception.UnauthorizedException;
 import org.springframework.security.core.Authentication;
 
-import com.finditnow.shopservice.exception.UnauthorizedException;
+import java.util.UUID;
 
 /**
  * Base controller class providing common functionality for all controllers.

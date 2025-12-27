@@ -3,9 +3,7 @@ package com.finditnow.auth.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.model.AuthCredential;
-import com.finditnow.auth.model.AuthOauthGoogle;
 import com.finditnow.auth.model.AuthSession;
-import com.finditnow.auth.types.Role;
 import com.finditnow.auth.utils.Logger;
 import com.finditnow.config.Config;
 import com.finditnow.jwt.JwtService;
@@ -79,7 +77,13 @@ public class OAuthService {
             AuthCredential cred = authService.findCredentialByAuthProvider(sub);
 
             if(cred==null){
-                cred = authService.findOrCreateCredWithOauth(sub, email);
+                cred = authService.findCredentialByEmail(email);
+
+                if(cred==null){
+                    cred = authService.findOrCreateCredWithOauth(sub, email);
+                }else{
+                    authService.createOauthByExistingCred(sub, email, cred.getUserId());
+                }
             }
             // Use provided profile or fall back to existing user role
             String profile =

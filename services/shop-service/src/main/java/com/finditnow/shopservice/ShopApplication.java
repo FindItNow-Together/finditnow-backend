@@ -1,9 +1,8 @@
 package com.finditnow.shopservice;
 
+import com.finditnow.database.Database;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-import com.finditnow.database.Database;
 
 @SpringBootApplication
 public class ShopApplication {

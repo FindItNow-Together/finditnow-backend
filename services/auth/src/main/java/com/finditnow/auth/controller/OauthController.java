@@ -13,14 +13,12 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Duration;
 import java.util.UUID;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class OauthController extends BaseController {
     private final OAuthService oAuthService;
-    private final long refreshTokenMaxLifeSeconds = Duration.ofDays(7).toSeconds();
 
     public OauthController(OAuthService oAuthService) {
         super();
