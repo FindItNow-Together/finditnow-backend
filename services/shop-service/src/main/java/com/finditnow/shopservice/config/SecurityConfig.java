@@ -53,7 +53,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/products/**").hasAnyRole("SHOP", "ADMIN")
 
                         // All other requests must be authenticated
-                        .anyRequest().authenticated())
+                        .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

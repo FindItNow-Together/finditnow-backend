@@ -241,12 +241,13 @@ public class AuthService {
                 if (!cred.isEmailVerified() && !cred.isPhoneVerified()) {
                     data.put("error", "account_not_verified");
                     data.put("credId", cred.getId().toString());
-                    return new AuthResponse(403, data);
+                    return new AuthResponse(409, data);
                 }
 
                 if (cred.getPasswordHash() == null) {
-                    data.put("message", "Password not found, either set it or use google based login");
-                    return new AuthResponse(403, data);
+                    data.put("error", "password_login_not_supported");
+                    data.put("loginMethod", "oauth");
+                    return new AuthResponse(409, data);
                 }
 
                 if (!PasswordUtil.verifyPassword(password, cred.getPasswordHash())) {

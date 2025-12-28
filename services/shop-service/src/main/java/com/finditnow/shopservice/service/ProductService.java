@@ -1,5 +1,6 @@
 package com.finditnow.shopservice.service;
 
+import com.finditnow.shopservice.dto.CategoryResponse;
 import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.dto.ProductRequest;
 import com.finditnow.shopservice.dto.ProductResponse;
@@ -127,7 +128,11 @@ public class ProductService {
     }
 
     private ProductResponse mapToResponse(Product product) {
-        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), product.getCategory(), product.getImageUrl());
+        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), mapCategory(product.getCategory()), product.getImageUrl());
+    }
+
+    private CategoryResponse mapCategory(Category category) {
+        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(), category.getImageUrl(), category.getType());
     }
 
     private PagedResponse<ProductResponse> mapToPagedResponse(Page<Product> userPage) {

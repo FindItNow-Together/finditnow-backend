@@ -30,6 +30,18 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
     List<User> findAllByRole(String role);
 
-    @Query(value = "SELECT DISTINCT(u) FROM User u WHERE u.firstName LIKE :nameQuery% OR u.lastName LIKE :nameQuery% AND u.role=:role")
-    Page<User> searchByNameAndRole(@Param("nameQuery") String nameQuery, @Param("role") String role, Pageable pageable);
+    @Query("""
+    SELECT DISTINCT u
+    FROM User u
+    WHERE (
+        LOWER(u.firstName) LIKE LOWER(CONCAT('%', :nameQuery, '%'))
+        OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :nameQuery, '%'))
+    )
+    AND u.role = :role
+""")
+    Page<User> searchByNameAndRole(
+            @Param("nameQuery") String nameQuery,
+            @Param("role") String role,
+            Pageable pageable
+    );
 }
