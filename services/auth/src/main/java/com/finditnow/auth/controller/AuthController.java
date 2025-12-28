@@ -2,18 +2,19 @@ package com.finditnow.auth.controller;
 
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.dto.SignUpDto;
-import com.finditnow.auth.handlers.PathHandler;
+import com.finditnow.auth.handlers.JwtAuthHandler;
 import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.types.Role;
-import com.finditnow.auth.utils.Logger;
+import org.slf4j.Logger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.UUID;
 
 public class AuthController extends BaseController {
-    private static final Logger logger = Logger.getLogger(AuthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final AuthService authService;
 
     public AuthController(AuthService authService) {
@@ -37,7 +38,7 @@ public class AuthController extends BaseController {
             AuthResponse response = authService.signUp(signUpReq);
             sendResponse(exchange, response.statusCode(), response.data());
         } catch (Exception e) {
-            logger.getCore().error("Signup failed", e);
+            logger.error("Signup failed", e);
             sendError(exchange, 500, "internal_server_error");
         }
     }
@@ -137,7 +138,7 @@ public class AuthController extends BaseController {
             return;
         }
 
-        Map<String, String> authInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
+        Map<String, String> authInfo = exchange.getAttachment(JwtAuthHandler.SESSION_INFO);
         String credId = authInfo.get("credId");
 
         AuthResponse response = authService.updatePassword(credId, newPassword);
@@ -155,7 +156,7 @@ public class AuthController extends BaseController {
 
         Role roleCheck = Role.valueOf(role);
 
-        Map<String, String> authInfo = exchange.getAttachment(PathHandler.SESSION_INFO);
+        Map<String, String> authInfo = exchange.getAttachment(JwtAuthHandler.SESSION_INFO);
         String credId = authInfo.get("credId");
 
         AuthResponse resp = authService.updateRoleByCredential(UUID.fromString(credId), authInfo.get("userId"), role);
@@ -184,7 +185,7 @@ public class AuthController extends BaseController {
     }
 
     public void logout(HttpServerExchange exchange) throws Exception {
-        String accessToken = exchange.getAttachment(PathHandler.AUTH_TOKEN);
+        String accessToken = exchange.getAttachment(JwtAuthHandler.AUTH_TOKEN);
         String refreshToken = null;
 
         Cookie refreshCookie = exchange.getRequestCookie("refresh_token");

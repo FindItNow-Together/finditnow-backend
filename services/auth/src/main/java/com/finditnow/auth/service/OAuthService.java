@@ -4,10 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
-import com.finditnow.auth.utils.Logger;
+import org.slf4j.Logger;
 import com.finditnow.config.Config;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -16,7 +17,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class OAuthService {
-    private static final Logger logger = Logger.getLogger(OAuthService.class);
+    private static final Logger logger = LoggerFactory.getLogger(OAuthService.class);
     private final ObjectMapper mapper = new ObjectMapper();
     private final AuthService authService;
     private final JwtService jwt;
@@ -122,7 +123,7 @@ public class OAuthService {
             return new AuthResponse(200, data);
 
         } catch (Exception e) {
-            logger.getCore().error("Google OAuth authentication failed for email: " + email, e);
+            logger.error("Google OAuth authentication failed for email: " + email, e);
             data.put("error", "authentication_failed");
             return new AuthResponse(500, data);
         }
@@ -160,7 +161,7 @@ public class OAuthService {
         try {
             String[] parts = jwt.split("\\.");
             if (parts.length != 3) {
-                logger.getCore().warn("Invalid JWT format: expected 3 parts");
+                logger.warn("Invalid JWT format: expected 3 parts");
                 return null;
             }
 
@@ -188,10 +189,10 @@ public class OAuthService {
 
             return payload;
         } catch (IllegalArgumentException e) {
-            logger.getCore().warn("Invalid Base64 encoding in JWT", e);
+            logger.warn("Invalid Base64 encoding in JWT", e);
             return null;
         } catch (Exception e) {
-            logger.getCore().error("Failed to decode JWT payload", e);
+            logger.error("Failed to decode JWT payload", e);
             return null;
         }
     }

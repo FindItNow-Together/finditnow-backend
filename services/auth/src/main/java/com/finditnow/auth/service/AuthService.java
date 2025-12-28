@@ -8,7 +8,6 @@ import com.finditnow.auth.model.AuthOauthGoogle;
 import com.finditnow.auth.model.AuthSession;
 import com.finditnow.auth.transaction.TransactionManager;
 import com.finditnow.auth.types.Role;
-import com.finditnow.auth.utils.Logger;
 import com.finditnow.common.OtpGenerator;
 import com.finditnow.common.PasswordUtil;
 import com.finditnow.config.Config;
@@ -21,6 +20,8 @@ import com.finditnow.user.UpdateUserRoleRequest;
 import com.finditnow.user.UserServiceGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -32,7 +33,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class AuthService {
-    private static final Logger logger = Logger.getLogger(AuthService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
     private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
     private final AuthDao authDao;
     private final RedisStore redis;
@@ -93,7 +94,7 @@ public class AuthService {
             });
 
         } catch (Exception e) {
-            logger.getCore().error("Signup failed", e);
+            logger.error("Signup failed", e);
             Map<String, String> data = new HashMap<>();
             data.put("error", "internal_server_error");
             return new AuthResponse(500, data);
@@ -134,7 +135,7 @@ public class AuthService {
                 try {
                     createUserProfile(cred);
                 } catch (Exception e) {
-                    logger.getCore().error("Failed to create user profile", e);
+                    logger.error("Failed to create user profile", e);
                     throw new RuntimeException("User profile creation failed", e);
                 }
 
@@ -148,7 +149,7 @@ public class AuthService {
                 try {
                     addSessionToRedis(authSession, cred.getUserId().toString(), cred.getRole().toString());
                 } catch (Exception e) {
-                    logger.getCore().error("Failed to add session to Redis", e);
+                    logger.error("Failed to add session to Redis", e);
                     throw new RuntimeException("Redis operation failed", e);
                 }
 
@@ -161,7 +162,7 @@ public class AuthService {
             });
 
         } catch (Exception e) {
-            logger.getCore().error("Email verification failed", e);
+            logger.error("Email verification failed", e);
             data.put("error", "internal_server_error");
             return new AuthResponse(500, data);
         }
@@ -196,7 +197,7 @@ public class AuthService {
             });
 
         } catch (Exception e) {
-            logger.getCore().error("Password reset failed", e);
+            logger.error("Password reset failed", e);
             data.put("error", "internal_server_error");
             return new AuthResponse(500, data);
         }
@@ -207,7 +208,7 @@ public class AuthService {
 
         try {
             return transactionManager.executeInTransaction(conn -> {
-                AuthCredential cred = authDao.credDao.findById(credId).orElseThrow(()-> new RuntimeException("Credential not found"));
+                AuthCredential cred = authDao.credDao.findById(credId).orElseThrow(() -> new RuntimeException("Credential not found"));
 
                 cred.setRole(Role.valueOf(role));
                 authDao.credDao.update(conn, cred);
@@ -216,7 +217,7 @@ public class AuthService {
                 return new AuthResponse(201, resp);
             });
         } catch (Exception e) {
-            logger.getCore().error("Failed to update role", e);
+            logger.error("Failed to update role", e);
             resp.put("error", "internal_server_error");
             return new AuthResponse(500, resp);
         }
@@ -243,7 +244,7 @@ public class AuthService {
                     return new AuthResponse(403, data);
                 }
 
-                if(cred.getPasswordHash() ==null){
+                if (cred.getPasswordHash() == null) {
                     data.put("message", "Password not found, either set it or use google based login");
                     return new AuthResponse(403, data);
                 }
@@ -274,7 +275,7 @@ public class AuthService {
             });
 
         } catch (Exception e) {
-            logger.getCore().error("Sign in failed", e);
+            logger.error("Sign in failed", e);
             data.put("error", "internal_server_error");
             return new AuthResponse(500, data);
         }
@@ -300,10 +301,10 @@ public class AuthService {
         }
     }
 
-    public AuthCredential findCredentialByEmail(String email){
-        try{
+    public AuthCredential findCredentialByEmail(String email) {
+        try {
             return authDao.credDao.findByEmail(email).orElse(null);
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new RuntimeException("Failed to find credential by email", e);
         }
     }
@@ -376,7 +377,7 @@ public class AuthService {
         try {
             createUserProfile(cred);
         } catch (Exception e) {
-            logger.getCore().warn("Failed to create user profile for OAuth user", e);
+            logger.warn("Failed to create user profile for OAuth user", e);
         }
 
         return cred;
@@ -439,7 +440,7 @@ public class AuthService {
         try {
             authCred = authDao.credDao.findById(UUID.fromString(credId));
         } catch (SQLException e) {
-            logger.getCore().error(e.getMessage());
+            logger.error(e.getMessage());
             data.put("error", "internal server error");
             return new AuthResponse(500, data);
         }
@@ -475,7 +476,7 @@ public class AuthService {
         try {
             authCred = authDao.credDao.findByEmail(email);
         } catch (SQLException e) {
-            logger.getCore().error(e.getMessage());
+            logger.error(e.getMessage());
             data.put("error", "internal server error");
             return new AuthResponse(500, data);
         }
@@ -531,7 +532,7 @@ public class AuthService {
                 return new AuthResponse(200, data);
             });
         } catch (Exception e) {
-            logger.getCore().error(e.getMessage());
+            logger.error(e.getMessage());
             data.put("error", "internal server error");
             return new AuthResponse(500, data);
         }
@@ -549,7 +550,7 @@ public class AuthService {
 
                 redis.deleteRefreshToken(refreshToken);
             } catch (Exception e) {
-                logger.getCore().warn("Failed to invalidate refresh token", e);
+                logger.warn("Failed to invalidate refresh token", e);
             }
         }
 
@@ -560,7 +561,7 @@ public class AuthService {
                     redis.blacklistAccessToken(accessToken, ttlSeconds);
                 }
             } catch (Exception e) {
-                logger.getCore().warn("Failed to blacklist access token during logout", e);
+                logger.warn("Failed to blacklist access token during logout", e);
             }
         }
 

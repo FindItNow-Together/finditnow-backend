@@ -2,41 +2,46 @@ package com.finditnow.auth.server;
 
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
-import com.finditnow.auth.handlers.PathHandler;
-import com.finditnow.auth.handlers.RouteHandler;
-import com.finditnow.auth.utils.Logger;
+import com.finditnow.auth.handlers.JwtAuthHandler;
+import com.finditnow.auth.handlers.RequestLoggingHandler;
+import com.finditnow.auth.handlers.Routes;
+import org.slf4j.Logger;
 import com.finditnow.config.Config;
+import com.finditnow.jwt.JwtService;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
+import io.undertow.server.RoutingHandler;
 import io.undertow.util.Headers;
+import org.slf4j.LoggerFactory;
+
+import java.util.Set;
 
 public class HTTPServer {
-    private static final Logger logger = Logger.getLogger(HTTPServer.class);
-    private final int httpPort = Integer.parseInt(Config.get("AUTH_SERVICE_PORT", "8080"));
-    //    private final AuthHandler authHandler;
-    private final PathHandler pathHandler;
+    private static final Logger logger = LoggerFactory.getLogger(HTTPServer.class);
 
-    public HTTPServer(AuthController authController, OauthController oauthController) {
-        pathHandler = new PathHandler(new RouteHandler(authController, oauthController));
-    }
+    public HTTPServer(AuthController authController, OauthController oauthController, JwtService jwtService) {
+        RoutingHandler routes = Routes.build(authController, oauthController);
 
-    public void start() {
-        HttpHandler root = exchange -> {
+        Set<String> privateRoutes = Set.of(
+                "/updatepassword",
+                "/updaterole",
+                "/logout"
+        );
+
+        JwtAuthHandler jwtAuthHandler = new JwtAuthHandler(routes, jwtService,  privateRoutes);
+
+        HttpHandler root = new RequestLoggingHandler(jwtAuthHandler);
+
+        int httpPort = Integer.parseInt(Config.get("AUTH_SERVICE_PORT", "8080"));
+
+        Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(exchange -> {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-
-            try {
-                pathHandler.handleRequest(exchange);
-            } catch (Exception e) {
-                logger.getCore().error("Unhandled exception in HTTP handler", e);
-                exchange.setStatusCode(500);
-                exchange.getResponseSender().send("{\"error\":\"internal_error\"}");
-            }
-        };
-
-        Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(root).build();
+            root.handleRequest(exchange);
+        }).build();
 
         server.start();
-        logger.getCore().info("Auth Server started on port: {}", httpPort);
+
+        logger.info("Auth Server started on port: {}", httpPort);
     }
 }
 
