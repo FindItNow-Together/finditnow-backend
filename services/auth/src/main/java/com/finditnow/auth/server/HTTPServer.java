@@ -5,13 +5,13 @@ import com.finditnow.auth.controller.OauthController;
 import com.finditnow.auth.handlers.JwtAuthHandler;
 import com.finditnow.auth.handlers.RequestLoggingHandler;
 import com.finditnow.auth.handlers.Routes;
-import org.slf4j.Logger;
 import com.finditnow.config.Config;
 import com.finditnow.jwt.JwtService;
 import io.undertow.Undertow;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.RoutingHandler;
 import io.undertow.util.Headers;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Set;
@@ -28,7 +28,7 @@ public class HTTPServer {
                 "/logout"
         );
 
-        JwtAuthHandler jwtAuthHandler = new JwtAuthHandler(routes, jwtService,  privateRoutes);
+        JwtAuthHandler jwtAuthHandler = new JwtAuthHandler(routes, jwtService, privateRoutes);
 
         HttpHandler root = new RequestLoggingHandler(jwtAuthHandler);
 
@@ -36,7 +36,16 @@ public class HTTPServer {
 
         Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(exchange -> {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            root.handleRequest(exchange);
+
+            try {
+                root.handleRequest(exchange);
+            } catch (Exception ex) {
+                logger.error("Error occurred during {}, Message: {}", exchange.getRequestPath(), ex.getMessage());
+                if(!exchange.isResponseStarted()){
+                    exchange.setStatusCode(500);
+                    exchange.getResponseSender().send("{\"error\": \"Internal Server Error\"}");
+                }
+            }
         }).build();
 
         server.start();
