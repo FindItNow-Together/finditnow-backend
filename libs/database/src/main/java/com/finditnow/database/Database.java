@@ -42,6 +42,7 @@ public class Database {
         System.setProperty("DATABASE_USER", Config.get("DB_USER", "devuser"));
         System.setProperty("DATABASE_USER_PWD", Config.get("DB_PASSWORD", "dev@123"));
         System.setProperty("DATABASE_POOL_SIZE", Config.get("DB_POOL_SIZE", "5"));
+        System.setProperty("DATABASE_DDL_MODE", Config.get("DB_DDL_AUTO", "validate"));
         TimeZone.setDefault(TimeZone.getTimeZone(Config.get("DB_TIMEZONE", "UTC")));
     }
 
