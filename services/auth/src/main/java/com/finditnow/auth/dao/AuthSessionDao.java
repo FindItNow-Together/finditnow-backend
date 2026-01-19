@@ -87,6 +87,21 @@ public class AuthSessionDao {
         }
     }
 
+    public void update(Connection conn, AuthSession s) throws SQLException {
+        String sql = """
+                UPDATE auth_sessions SET expires_at = ?, is_valid = ?, revoked_at = ? WHERE id = ?
+            """;
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setObject(1, s.getExpiresAt());
+            ps.setBoolean(2, s.isValid());
+            ps.setObject(3, s.getRevokedAt());
+            ps.setObject(4, s.getId());
+
+            ps.executeUpdate();
+        }
+    }
+
     public String invalidate(Connection conn, UUID id) throws SQLException {
         Optional<AuthSession> session = findById(conn, id);
 
