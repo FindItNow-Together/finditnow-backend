@@ -9,8 +9,11 @@ import com.finditnow.shopservice.entity.Product;
 import com.finditnow.shopservice.exception.ForbiddenException;
 import com.finditnow.shopservice.exception.NotFoundException;
 import com.finditnow.shopservice.mapper.ProductMapper;
+import com.finditnow.shopservice.entity.Shop;
+import com.finditnow.shopservice.entity.ShopInventory;
 import com.finditnow.shopservice.repository.CategoryRepository;
 import com.finditnow.shopservice.repository.ProductRepository;
+import com.finditnow.shopservice.repository.ShopInventoryRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,70 +31,133 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
-    private final ShopService shopService;
+    private final ShopInventoryRepository shopInventoryRepository;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
 
     @Transactional
-    public ProductResponse addProduct(ProductRequest request, UUID ownerId) {
+    public ProductResponse addProduct(ProductRequest request, Long shopId, UUID ownerId) {
+        // Verify shop exists and user owns it
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new NotFoundException("Shop not found with id: " + shopId));
+        
+        if (!shop.getOwnerId().equals(ownerId)) {
+            throw new ForbiddenException("You don't have permission to add products to this shop");
+        }
+
+        // Resolve category
         Category cat = resolveCategory(request);
+        
+        // Create product
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setImageUrl(request.getImageUrl());
         product.setCategory(cat);
 
+        // Save product first
         Product savedProduct = productRepository.save(product);
-        return mapToResponse(savedProduct);
+
+        // Create shop inventory
+        ShopInventory inventory = new ShopInventory();
+        inventory.setProduct(savedProduct);
+        inventory.setShop(shop);
+        inventory.setPrice(request.getPrice() != null ? request.getPrice() : 0.0f);
+        inventory.setStock(request.getStock() != null ? request.getStock() : 0);
+        inventory.setReservedStock(0);
+        
+        // Set bidirectional relationship
+        savedProduct.setShopInventory(inventory);
+
+        // Save inventory (cascade will handle product update if needed)
+        ShopInventory savedInventory = shopInventoryRepository.save(inventory);
+
+        return mapToResponse(savedProduct, savedInventory);
     }
 
     @Transactional(readOnly = true)
     public List<ProductResponse> getAll() {
         List<Product> products = productRepository.findAll();
-        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+        return products.stream()
+                .map(p -> mapToResponse(p, p.getShopInventory()))
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> getProductsByShop(Long shopId) {
+        List<ShopInventory> inventories = shopInventoryRepository.findByShopId(shopId);
+        return inventories.stream()
+                .map(inv -> mapToResponse(inv.getProduct(), inv))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public ProductResponse getById(long id) {
-        return productMapper.toDto(productRepository.findById(id).orElseThrow(() -> new NoSuchElementException("No product of given id->" + id)));
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No product of given id->" + id));
+        return mapToResponse(product, product.getShopInventory());
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest request) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            // Check if product exists at all
-            if (!productRepository.existsById(productId)) {
-                return new NotFoundException("Product not found with id: " + productId);
-            }
-            // Product exists but user doesn't own it
-            return new ForbiddenException("You don't have permission to update this product");
-        });
+    public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
 
+        // Verify user owns the shop that contains this product
+        ShopInventory inventory = product.getShopInventory();
+        if (inventory == null || inventory.getShop() == null) {
+            throw new NotFoundException("Product inventory not found");
+        }
+        
+        Shop shop = inventory.getShop();
+        if (!shop.getOwnerId().equals(ownerId)) {
+            throw new ForbiddenException("You don't have permission to update this product");
+        }
+
+        // Update product fields
         Category category = resolveCategory(request);
         product.setName(request.getName());
         product.setDescription(request.getDescription());
         product.setCategory(category);
+        if (request.getImageUrl() != null) {
+            product.setImageUrl(request.getImageUrl());
+        }
+
+        // Update inventory fields if provided
+        if (request.getPrice() != null) {
+            inventory.setPrice(request.getPrice());
+        }
+        if (request.getStock() != null) {
+            inventory.setStock(request.getStock());
+        }
 
         Product updatedProduct = productRepository.save(product);
-        return mapToResponse(updatedProduct);
+        ShopInventory updatedInventory = shopInventoryRepository.save(inventory);
+        
+        return mapToResponse(updatedProduct, updatedInventory);
     }
 
     @Transactional
-    public void deleteProduct(Long productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            // Check if product exists at all
-            if (!productRepository.existsById(productId)) {
-                return new NotFoundException("Product not found with id: " + productId);
-            }
-            // Product exists but user doesn't own it
-            return new ForbiddenException("You don't have permission to delete this product");
-        });
+    public void deleteProduct(Long productId, UUID ownerId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
+
+        // Verify user owns the shop that contains this product
+        ShopInventory inventory = product.getShopInventory();
+        if (inventory == null || inventory.getShop() == null) {
+            throw new NotFoundException("Product inventory not found");
+        }
+        
+        Shop shop = inventory.getShop();
+        if (!shop.getOwnerId().equals(ownerId)) {
+            throw new ForbiddenException("You don't have permission to delete this product");
+        }
 
         productRepository.delete(product);
     }
 
     @Transactional
-    public void deleteProducts(List<Long> productIds) {
+    public void deleteProducts(List<Long> productIds, UUID ownerId) {
         if (productIds == null || productIds.isEmpty()) {
             throw new IllegalArgumentException("Product IDs list cannot be empty");
         }
@@ -100,6 +166,17 @@ public class ProductService {
 
         if (products.size() != productIds.size()) {
             throw new NotFoundException("One or more products not found");
+        }
+
+        // Verify user owns all shops containing these products
+        for (Product product : products) {
+            ShopInventory inventory = product.getShopInventory();
+            if (inventory != null && inventory.getShop() != null) {
+                Shop shop = inventory.getShop();
+                if (!shop.getOwnerId().equals(ownerId)) {
+                    throw new ForbiddenException("You don't have permission to delete product with id: " + product.getId());
+                }
+            }
         }
 
         productRepository.deleteAll(products);
@@ -127,8 +204,23 @@ public class ProductService {
         throw new IllegalArgumentException("Either categoryId or category name must be provided");
     }
 
-    private ProductResponse mapToResponse(Product product) {
-        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), mapCategory(product.getCategory()), product.getImageUrl());
+    private ProductResponse mapToResponse(Product product, ShopInventory inventory) {
+        ProductResponse response = new ProductResponse();
+        response.setId(product.getId());
+        response.setName(product.getName());
+        response.setDescription(product.getDescription());
+        response.setCategory(mapCategory(product.getCategory()));
+        response.setImageUrl(product.getImageUrl());
+        
+        if (inventory != null) {
+            response.setPrice(inventory.getPrice());
+            response.setStock(inventory.getStock());
+            if (inventory.getShop() != null) {
+                response.setShopId(inventory.getShop().getId());
+            }
+        }
+        
+        return response;
     }
 
     private CategoryResponse mapCategory(Category category) {

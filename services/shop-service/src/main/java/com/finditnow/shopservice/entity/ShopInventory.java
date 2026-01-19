@@ -13,22 +13,23 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ShopInventory {
     @Id
-    long id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Min(0)
-    int reservedStock; //already reserved (in someone's cart)
+    private int reservedStock; //already reserved (in someone's cart)
 
     @Min(0)
-    float price;
+    private float price;
 
     @Min(0)
-    int stock;
+    private int stock;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "shop_id")
-    Shop shop;
+    private Shop shop;
 
     @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "product_id")
-    Product product;
+    private Product product;
 }

@@ -1,7 +1,10 @@
 package com.finditnow.shopservice.controller;
 
+import com.finditnow.shopservice.dto.ProductRequest;
+import com.finditnow.shopservice.dto.ProductResponse;
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
+import com.finditnow.shopservice.service.ProductService;
 import com.finditnow.shopservice.service.ShopService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -21,9 +24,11 @@ import java.util.UUID;
 public class ShopController extends BaseController {
 
     private final ShopService shopService;
+    private final ProductService productService;
 
-    public ShopController(ShopService shopService) {
+    public ShopController(ShopService shopService, ProductService productService) {
         this.shopService = shopService;
+        this.productService = productService;
     }
 
     @PostMapping("/add")
@@ -121,5 +126,31 @@ public class ShopController extends BaseController {
 
         shopService.deleteShops(shopIds, userId, isAdmin);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Endpoint to add a product to a shop.
+     * POST /api/shop/{shopId}/products
+     */
+    @PostMapping("/{shopId}/products")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<ProductResponse> addProduct(
+            @PathVariable Long shopId,
+            @Valid @RequestBody ProductRequest request,
+            Authentication authentication) {
+        UUID userId = extractUserId(authentication);
+        ProductResponse response = productService.addProduct(request, shopId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Endpoint to get all products for a shop.
+     * GET /api/shop/{shopId}/products
+     */
+    @GetMapping("/{shopId}/products")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
+        List<ProductResponse> products = productService.getProductsByShop(shopId);
+        return ResponseEntity.ok(products);
     }
 }

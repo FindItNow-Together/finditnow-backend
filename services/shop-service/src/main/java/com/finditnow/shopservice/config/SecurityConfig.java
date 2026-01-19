@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,22 +37,15 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/search/**").permitAll()
+                        .requestMatchers("/categories/**").permitAll()
 
-                        // User management endpoints (ADMIN only)
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        // Product endpoints (nginx strips /api/shop/ prefix, so service receives /products/**)
+                        .requestMatchers("/products/**").hasAnyRole("SHOP", "ADMIN")
 
-                        // Shop endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shops").hasRole("ADMIN") // Get all shops (ADMIN only)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shops").hasAnyRole("SHOP", "ADMIN") // Create shop
-                                                                                                       // (SHOP/ADMIN)
-                        .requestMatchers("/api/v1/shops/**").hasAnyRole("SHOP", "ADMIN") // All other shop endpoints
-
-                        // Product endpoints
-                        .requestMatchers("/api/v1/products/**").hasAnyRole("SHOP", "ADMIN")
-
-                        // All other requests must be authenticated
-                        .anyRequest().permitAll())
+                        // Shop endpoints are protected by @PreAuthorize on controller methods
+                        // All other requests (shop endpoints) - let @PreAuthorize handle authorization
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

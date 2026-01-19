@@ -147,6 +147,20 @@ public class ShopService {
     }
 
     /**
+     * Searches shops by name or address.
+     * 
+     * @param query The search query string
+     * @return List of ShopResponse DTOs matching the query
+     */
+    @Transactional(readOnly = true)
+    public List<ShopResponse> searchShops(String query) {
+        List<Shop> shops = shopRepository.searchByNameOrAddress(query);
+        return shops.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Converts a Shop entity to a ShopResponse DTO.
      * This method extracts only the necessary information to send to the client.
      * 

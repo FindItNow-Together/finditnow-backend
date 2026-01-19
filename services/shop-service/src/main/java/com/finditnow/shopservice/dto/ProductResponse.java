@@ -14,5 +14,8 @@ public class ProductResponse {
     private String description;
     private CategoryResponse category;
     private String imageUrl;
+    private Float price;
+    private Integer stock;
+    private Long shopId;
 }
 
