@@ -1,8 +1,10 @@
 package com.finditnow.userservice.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.finditnow.userservice.entity.AddressType;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -40,13 +42,15 @@ public class UserAddressDto {
     @Size(max = 20, message = "Postal code must not exceed 20 characters")
     private String postalCode;
 
-    @NotBlank(message = "Address type is required")
+    @NotNull(message = "Address type is required")
     private AddressType addressType;
 
     private double latitude;
     private double longitude;
 
+    @JsonProperty("isPrimary")
     private boolean isPrimary;
+
     private String fullAddress;
     private UUID userId;
 }
