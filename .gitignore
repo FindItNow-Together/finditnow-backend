@@ -1,0 +1,24 @@
+# Gradle
+.gradle/
+build/
+bin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Logs
+*.log
+backend.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Sensitive
+*.env
+application-local.yml
+
+# Frontend (separate repo)
+frontend/
