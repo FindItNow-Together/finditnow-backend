@@ -104,7 +104,8 @@ else
 $ServiceDatabases = @(
     "auth_service",
     "user_service",
-    "shop_service"
+    "shop_service",
+    "order_service"
 )
 
 foreach ($db in $ServiceDatabases)
@@ -133,11 +134,28 @@ Write-Host ">>>Starting microservices in new CMD windows..."
 
 cd $ROOT_DIR
 
-Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:auth:run"
-Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:user-service:bootRun"
-Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:shop-service:bootRun"
-Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:file-gateway:run"
+# Check if Windows Terminal is available
+$wtPath = Get-Command wt.exe -ErrorAction SilentlyContinue
 
-Write-Host ">>>Opened windows for both services."
+if ($wtPath) {
+    # Windows Terminal command with multiple tabs
+    wt.exe `
+        new-tab --title "Auth Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:auth:run" `; `
+        new-tab --title "User Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:user-service:bootRun" `; `
+        new-tab --title "Shop Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:shop-service:bootRun" `; `
+        new-tab --title "Order Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:order-service:bootRun" `; `
+        new-tab --title "File Gateway" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:file-gateway:run"
+
+    Write-Host ">>>Opened Windows Terminal with service tabs."
+} else {
+    Write-Host "!! Windows Terminal (wt.exe) not found. Falling back to separate CMD windows..."
+    Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:auth:run"
+    Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:user-service:bootRun"
+    Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:shop-service:bootRun"
+    Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:order-service:bootRun"
+    Start-Process cmd.exe -ArgumentList "/k gradlew.bat :services:file-gateway:run"
+    Write-Host ">>>Opened separate CMD windows for services."
+}
+
 Write-Host ""
 Write-Host "===[ Everything running ]==="

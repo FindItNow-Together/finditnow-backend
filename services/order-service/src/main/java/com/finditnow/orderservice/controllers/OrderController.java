@@ -1,12 +1,16 @@
 package com.finditnow.orderservice.controllers;
 
+import com.finditnow.orderservice.dtos.CreateOrderFromCartRequest;
+import com.finditnow.orderservice.dtos.OrderResponse;
 import com.finditnow.orderservice.services.OrderService;
-import com.razorpay.RazorpayException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.UUID;
 
 @RestController
+@RequestMapping("/orders")
 public class OrderController {
     public final OrderService orderService;
 
@@ -14,11 +18,32 @@ public class OrderController {
         this.orderService = orderService;
     }
 
-    @PostMapping("/create-order")
-    public String createOrder(@RequestParam("amount") int amount) throws RazorpayException {
-        if (amount < 0) {
+    @PostMapping("/from-cart")
+    public ResponseEntity<OrderResponse> createOrderFromCart(
+            @RequestBody CreateOrderFromCartRequest request,
+            @RequestAttribute("userId") String userIdStr
+    ) {
+        UUID userId = UUID.fromString(userIdStr);
+        OrderResponse order = orderService.createOrderFromCart(request, userId);
+        return ResponseEntity.ok(order);
+    }
 
-        }
-        return orderService.createOrder(amount).toString();
+    @GetMapping("/{orderId}")
+    public ResponseEntity<OrderResponse> getOrder(
+            @PathVariable UUID orderId,
+            @RequestAttribute("userId") String userIdStr
+    ) {
+        UUID userId = UUID.fromString(userIdStr);
+        OrderResponse order = orderService.getOrder(orderId, userId);
+        return ResponseEntity.ok(order);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getUserOrders(
+            @RequestAttribute("userId") String userIdStr
+    ) {
+        UUID userId = UUID.fromString(userIdStr);
+        List<OrderResponse> orders = orderService.getUserOrders(userId);
+        return ResponseEntity.ok(orders);
     }
 }
