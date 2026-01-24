@@ -570,11 +570,39 @@ public class AuthService {
         return new AuthResponse(200, data);
     }
 
-    public AuthResponse refresh(String refreshToken) {
+    public AuthResponse refresh(String refreshToken) throws Exception {
         Map<String, String> data = new HashMap<>();
         Map<String, String> info = redis.getRefreshToken(refreshToken);
 
+        //session not in redis cache
         if (info == null) {
+            data.put("error", "invalid_token");
+            return new AuthResponse(401, data);
+        }
+
+        //recheck session for phantom cache entry
+        var updatedSession =  transactionManager.executeInTransaction(conn -> {
+            Optional<AuthSession> dbSession = authDao.sessionDao.findBySessionToken(conn, refreshToken);
+
+            //phantom cache entry check
+            if (dbSession.isEmpty()) {
+                return null;
+            }
+
+            AuthSession finalDbSession = dbSession.get();
+
+            if (OffsetDateTime.now().isAfter(finalDbSession.getExpiresAt()) || !finalDbSession.isValid()) {
+                return null;
+            }
+
+            finalDbSession.setExpiresAt(OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
+            authDao.sessionDao.update(conn, finalDbSession);
+            addSessionToRedis(finalDbSession, info.get("userId"), info.get("profile"));
+            return finalDbSession;
+        });
+
+        if(updatedSession == null) {
+            redis.deleteRefreshToken(refreshToken);
             data.put("error", "invalid_refresh");
             return new AuthResponse(401, data);
         }
