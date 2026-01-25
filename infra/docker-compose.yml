@@ -33,6 +33,10 @@ services:
       - USER_SERVICE_PORT=${USER_SERVICE_PORT:-8081}
       - SHOP_SERVICE_PORT=${SHOP_SERVICE_PORT:-8083}
       - ORDER_SERVICE_PORT=${ORDER_SERVICE_PORT:-8084}
+<<<<<<< HEAD
+=======
+      - DELIVERY_SERVICE_PORT=${DELIVERY_SERVICE_PORT:-8086}
+>>>>>>> da72e1a (Update delivery system implementation)
       - FILE_GATEWAY_SERVICE_PORT=${FILE_GATEWAY_SERVICE_PORT:-8090}
     ports:
       - "${NGINX_PORT:-80}:80"

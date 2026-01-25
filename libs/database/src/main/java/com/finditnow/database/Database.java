@@ -19,7 +19,12 @@ public class Database {
             throw new IllegalArgumentException("serviceName:dbName cannot be null or empty");
         }
         HikariConfig dbConfig = new HikariConfig();
+<<<<<<< HEAD
         dbConfig.setJdbcUrl("jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":" + Config.get("DB_PORT", "5432") + "/" + serviceName);
+=======
+        dbConfig.setJdbcUrl("jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":"
+                + Config.get("DB_PORT", "5432") + "/" + serviceName);
+>>>>>>> da72e1a (Update delivery system implementation)
 
         dbConfig.setUsername(Config.get("DB_USER", "devuser"));
         dbConfig.setPassword(Config.get("DB_PASSWORD", "dev@123"));
@@ -38,9 +43,32 @@ public class Database {
 
     public static void setEnv(String serviceName) {
         System.setProperty("SERVICE_PORT", Config.get(serviceName.toUpperCase() + "_PORT", "8081"));
+<<<<<<< HEAD
         System.setProperty("JDBC_DATABASE_URL", "jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":" + Config.get("DB_PORT", "5432") + "/" + serviceName);
         System.setProperty("DATABASE_USER", Config.get("DB_USER", "devuser"));
         System.setProperty("DATABASE_USER_PWD", Config.get("DB_PASSWORD", "dev@123"));
+=======
+
+        String jdbcUrl = Config.get("JDBC_DATABASE_URL");
+        if (jdbcUrl == null || jdbcUrl.isEmpty()) {
+            jdbcUrl = "jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":" + Config.get("DB_PORT", "5432")
+                    + "/" + serviceName;
+        }
+        System.setProperty("JDBC_DATABASE_URL", jdbcUrl);
+
+        String dbUser = Config.get("DATABASE_USER");
+        if (dbUser == null || dbUser.isEmpty()) {
+            dbUser = Config.get("DB_USER", "devuser");
+        }
+        System.setProperty("DATABASE_USER", dbUser);
+
+        String dbPwd = Config.get("DATABASE_USER_PWD");
+        if (dbPwd == null) {
+            dbPwd = Config.get("DB_PASSWORD", "dev@123");
+        }
+        System.setProperty("DATABASE_USER_PWD", dbPwd);
+
+>>>>>>> da72e1a (Update delivery system implementation)
         System.setProperty("DATABASE_POOL_SIZE", Config.get("DB_POOL_SIZE", "5"));
         System.setProperty("DATABASE_DDL_MODE", Config.get("DB_DDL_AUTO", "validate"));
         TimeZone.setDefault(TimeZone.getTimeZone(Config.get("DB_TIMEZONE", "UTC")));
@@ -50,4 +78,7 @@ public class Database {
         return dataSource;
     }
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> da72e1a (Update delivery system implementation)

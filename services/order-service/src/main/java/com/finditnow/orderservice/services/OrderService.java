@@ -1,9 +1,17 @@
 package com.finditnow.orderservice.services;
 
 import com.finditnow.orderservice.TestCartData;
+<<<<<<< HEAD
 import com.finditnow.orderservice.daos.OrderDao;
 import com.finditnow.orderservice.daos.PaymentDao;
 import com.finditnow.orderservice.dtos.*;
+=======
+import com.finditnow.orderservice.clients.DeliveryClient;
+import com.finditnow.orderservice.daos.OrderDao;
+import com.finditnow.orderservice.daos.PaymentDao;
+import com.finditnow.orderservice.dtos.*;
+
+>>>>>>> da72e1a (Update delivery system implementation)
 import com.finditnow.orderservice.entities.Order;
 import com.finditnow.orderservice.entities.OrderItem;
 import jakarta.transaction.Transactional;
@@ -23,6 +31,10 @@ import java.util.stream.Collectors;
 public class OrderService {
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
+<<<<<<< HEAD
+=======
+    private final DeliveryClient deliveryClient;
+>>>>>>> da72e1a (Update delivery system implementation)
 
     // This should be configured via application.properties
     private static final String CART_SERVICE_URL = "http://localhost:8081";
@@ -46,6 +58,22 @@ public class OrderService {
                 .mapToDouble(item -> item.getPrice() * item.getQuantity())
                 .sum();
 
+<<<<<<< HEAD
+=======
+        // 3.1 Calculate Delivery Charge
+        double deliveryCharge = 0.0;
+        if (!"TAKEAWAY".equalsIgnoreCase(request.getDeliveryType())) {
+            // TODO: Get actual lat/long from Shop and User Address
+            DeliveryQuoteResponse quote = deliveryClient.calculateQuote(
+                    DeliveryQuoteRequest.builder()
+                            .shopLatitude(0.0).shopLongitude(0.0)
+                            .userLatitude(0.0).userLongitude(0.0)
+                            .build());
+            deliveryCharge = quote.getAmount();
+        }
+        totalAmount += deliveryCharge;
+
+>>>>>>> da72e1a (Update delivery system implementation)
         System.out.println("Total amount: " + totalAmount);
 
         // 4. Create order entity
@@ -56,11 +84,21 @@ public class OrderService {
         order.setPaymentMethod(
                 "online".equals(request.getPaymentMethod())
                         ? Order.PaymentMethod.ONLINE
+<<<<<<< HEAD
                         : Order.PaymentMethod.CASH_ON_DELIVERY
         );
         order.setPaymentStatus(Order.PaymentStatus.PENDING);
         order.setTotalAmount(totalAmount);
         order.setDeliveryAddressId(request.getAddressId());
+=======
+                        : Order.PaymentMethod.CASH_ON_DELIVERY);
+        order.setPaymentStatus(Order.PaymentStatus.PENDING);
+        order.setTotalAmount(totalAmount);
+        order.setDeliveryAddressId(request.getAddressId());
+        order.setDeliveryCharge(deliveryCharge);
+        order.setInstructions(request.getInstructions());
+        order.setDeliveryType(request.getDeliveryType() != null ? request.getDeliveryType() : "PARTNER");
+>>>>>>> da72e1a (Update delivery system implementation)
         order.setCreatedAt(LocalDateTime.now());
         order.setOrderItems(new ArrayList<>());
 
@@ -87,6 +125,12 @@ public class OrderService {
         if (savedOrder.getPaymentMethod() == Order.PaymentMethod.CASH_ON_DELIVERY) {
             savedOrder.setStatus(Order.OrderStatus.CONFIRMED);
             savedOrder = orderDao.save(savedOrder);
+<<<<<<< HEAD
+=======
+
+            // Initiate Delivery for COD
+            initiateDelivery(savedOrder);
+>>>>>>> da72e1a (Update delivery system implementation)
         }
 
         return mapToOrderResponse(savedOrder);
@@ -119,6 +163,7 @@ public class OrderService {
         order.setStatus(Order.OrderStatus.CONFIRMED);
         orderDao.save(order);
 
+<<<<<<< HEAD
         log.info("Order {} confirmed after successful payment", orderId);
     }
 
@@ -149,6 +194,51 @@ public class OrderService {
 //            log.warn("Failed to clear cart: {}", cartId, e);
 //            // Don't fail order creation if cart clear fails
 //        }
+=======
+        // Initiate Delivery for Online Payment
+        initiateDelivery(order);
+
+        log.info("Order {} confirmed after successful payment", orderId);
+    }
+
+    public DeliveryQuoteResponse getDeliveryQuote(Long shopId, UUID addressId) {
+        // TODO: Fetch Shop and User Address to get real Lat/Long
+        // For now, mocking coordinates
+        return deliveryClient.calculateQuote(
+                DeliveryQuoteRequest.builder()
+                        .shopLatitude(0.0).shopLongitude(0.0)
+                        .userLatitude(0.0).userLongitude(0.0)
+                        .build());
+    }
+
+    private CartDTO fetchCart(UUID cartId, UUID userId) {
+
+        return TestCartData.getCartById(cartId);
+        // try {
+        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
+        // // Add authentication headers as needed
+        // RestTemplate restTemplate = new RestTemplate();
+        //
+        // return restTemplate.getForObject(url, CartDTO.class);
+        // } catch (Exception e) {
+        // log.error("Failed to fetch cart: {}", cartId, e);
+        // throw new RuntimeException("Failed to fetch cart");
+        // }
+    }
+
+    private void clearCart(UUID cartId, UUID userId) {
+        // try {
+        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
+        //
+        // RestTemplate restTemplate = new RestTemplate();
+        //
+        // restTemplate.delete(url);
+        // log.info("Cart {} cleared after order creation", cartId);
+        // } catch (Exception e) {
+        // log.warn("Failed to clear cart: {}", cartId, e);
+        // // Don't fail order creation if cart clear fails
+        // }
+>>>>>>> da72e1a (Update delivery system implementation)
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
@@ -178,4 +268,25 @@ public class OrderService {
         response.setItems(items);
         return response;
     }
+<<<<<<< HEAD
+=======
+
+    private void initiateDelivery(Order order) {
+        // TODO: Fetch Shop Address and Customer Address properly
+        String placeholderAddress = "To be fetched address";
+
+        InitiateDeliveryRequest request = InitiateDeliveryRequest.builder()
+                .orderId(order.getId())
+                .shopId(order.getShopId())
+                .customerId(order.getUserId())
+                .type(order.getDeliveryType())
+                .amount(order.getDeliveryCharge())
+                .pickupAddress(placeholderAddress) // We need to fetch shop address
+                .deliveryAddress(order.getDeliveryAddressId().toString()) // Ideally fetch address text
+                .instructions(order.getInstructions())
+                .build();
+
+        deliveryClient.initiateDelivery(request);
+    }
+>>>>>>> da72e1a (Update delivery system implementation)
 }
