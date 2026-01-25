@@ -30,6 +30,8 @@ public class ShopRequest {
     @NotBlank(message = "Delivery option is required")
     private String deliveryOption;
 
+    private Long categoryId;
+
     /**
      * Optional: ID of the owner to assign this shop to.
      * Only used if the requester is an ADMIN.

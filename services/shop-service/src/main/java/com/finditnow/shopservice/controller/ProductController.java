@@ -32,12 +32,18 @@ public class ProductController extends BaseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-//    @GetMapping("/{shopId}/products")
-//    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
-//    public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
-//        List<ProductResponse> products = productService.getProductsByShop(shopId);
-//        return ResponseEntity.ok(products);
-//    }
+    @GetMapping("/products")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<List<ProductResponse>> getAllProducts(
+            @RequestParam(required = false) String query) {
+        List<ProductResponse> products;
+        if (query != null && !query.trim().isEmpty()) {
+            products = productService.searchProducts(query);
+        } else {
+            products = productService.getAll();
+        }
+        return ResponseEntity.ok(products);
+    }
 
     @PutMapping("/products/{id}")
     @PreAuthorize("hasRole('SHOP')")

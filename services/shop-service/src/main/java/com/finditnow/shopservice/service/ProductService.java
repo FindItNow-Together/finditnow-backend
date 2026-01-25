@@ -52,8 +52,15 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public List<ProductResponse> searchProducts(String query) {
+        List<Product> products = productRepository.findByNameContainingIgnoreCase(query);
+        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public ProductResponse getById(long id) {
-        return productMapper.toDto(productRepository.findById(id).orElseThrow(() -> new NoSuchElementException("No product of given id->" + id)));
+        return productMapper.toDto(productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No product of given id->" + id)));
     }
 
     @Transactional
@@ -111,8 +118,7 @@ public class ProductService {
             try {
                 Long categoryId = Long.parseLong(request.getCategoryId());
                 return categoryRepository.findById(categoryId)
-                        .orElseThrow(() ->
-                                new NotFoundException("Category not found with id: " + categoryId));
+                        .orElseThrow(() -> new NotFoundException("Category not found with id: " + categoryId));
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Invalid categoryId format");
             }
@@ -120,22 +126,25 @@ public class ProductService {
 
         if (request.getCategory() != null && !request.getCategory().isBlank()) {
             return categoryRepository.findByNameIgnoreCase(request.getCategory())
-                    .orElseThrow(() ->
-                            new NotFoundException("Category not found with name: " + request.getCategory()));
+                    .orElseThrow(() -> new NotFoundException("Category not found with name: " + request.getCategory()));
         }
 
         throw new IllegalArgumentException("Either categoryId or category name must be provided");
     }
 
     private ProductResponse mapToResponse(Product product) {
-        return new ProductResponse(product.getId(), product.getName(), product.getDescription(), mapCategory(product.getCategory()), product.getImageUrl());
+        return new ProductResponse(product.getId(), product.getName(), product.getDescription(),
+                mapCategory(product.getCategory()), product.getImageUrl());
     }
 
     private CategoryResponse mapCategory(Category category) {
-        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(), category.getImageUrl(), category.getType());
+        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(),
+                category.getImageUrl(), category.getType());
     }
 
     private PagedResponse<ProductResponse> mapToPagedResponse(Page<Product> userPage) {
-        return new PagedResponse<>(productMapper.toDtoList(userPage.getContent()), userPage.getNumber(), userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isFirst(), userPage.isLast());
+        return new PagedResponse<>(productMapper.toDtoList(userPage.getContent()), userPage.getNumber(),
+                userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isFirst(),
+                userPage.isLast());
     }
 }

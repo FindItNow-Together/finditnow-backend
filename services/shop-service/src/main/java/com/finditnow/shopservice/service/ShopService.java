@@ -1,10 +1,13 @@
 package com.finditnow.shopservice.service;
 
+import com.finditnow.shopservice.dto.CategoryResponse;
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
+import com.finditnow.shopservice.entity.Category;
 import com.finditnow.shopservice.entity.Shop;
 import com.finditnow.shopservice.exception.ForbiddenException;
 import com.finditnow.shopservice.exception.NotFoundException;
+import com.finditnow.shopservice.repository.CategoryRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,7 @@ import java.util.stream.Collectors;
 public class ShopService {
 
     private final ShopRepository shopRepository;
+    private final CategoryRepository categoryRepository;
 
     @Transactional
     public ShopResponse registerShop(ShopRequest request, UUID ownerId) {
@@ -31,6 +35,12 @@ public class ShopService {
         shop.setLongitude(request.getLongitude());
         shop.setOpenHours(request.getOpenHours());
         shop.setDeliveryOption(request.getDeliveryOption());
+
+        if (request.getCategoryId() != null) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.getCategoryId()));
+            shop.setCategory(category);
+        }
 
         Shop savedShop = shopRepository.save(shop);
         return mapToResponse(savedShop);
@@ -154,6 +164,16 @@ public class ShopService {
      * @return ShopResponse DTO containing shop information
      */
     private ShopResponse mapToResponse(Shop shop) {
+        CategoryResponse categoryResponse = null;
+        if (shop.getCategory() != null) {
+            categoryResponse = new CategoryResponse(
+                    shop.getCategory().getId(),
+                    shop.getCategory().getName(),
+                    shop.getCategory().getDescription(),
+                    shop.getCategory().getImageUrl(),
+                    shop.getCategory().getType());
+        }
+
         return new ShopResponse(
                 shop.getId(), // Shop's unique identifier
                 shop.getName(), // Shop name
@@ -163,7 +183,7 @@ public class ShopService {
                 shop.getLatitude(), // Latitude coordinate
                 shop.getLongitude(), // Longitude coordinate
                 shop.getOpenHours(), // Open hours text
-                shop.getDeliveryOption()// Delivery option selected
-        );
+                shop.getDeliveryOption(), // Delivery option selected
+                categoryResponse);
     }
 }
