@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,5 +41,5 @@ public class User {
     private Instant createdAt = Instant.now();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
-    private List<UserAddress> addresses;
+    private List<UserAddress> addresses = new ArrayList<>();
 }

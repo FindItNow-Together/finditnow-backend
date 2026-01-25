@@ -38,7 +38,7 @@ public class OrderController {
         return ResponseEntity.ok(order);
     }
 
-    @GetMapping
+    @GetMapping("/mine")
     public ResponseEntity<List<OrderResponse>> getUserOrders(
             @RequestAttribute("userId") String userIdStr
     ) {
