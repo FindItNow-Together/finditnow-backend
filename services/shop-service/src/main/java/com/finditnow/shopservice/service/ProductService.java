@@ -14,6 +14,8 @@ import com.finditnow.shopservice.repository.ProductRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ public class ProductService {
     private final ShopService shopService;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
+    private final com.finditnow.shopservice.repository.ShopInventoryRepository shopInventoryRepository;
 
     @Transactional
     public ProductResponse addProduct(ProductRequest request, UUID ownerId) {
@@ -51,6 +54,33 @@ public class ProductService {
         return products.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
+    /**
+     * Returns all products with pagination support.
+     * 
+     * @param page The page number (0-indexed)
+     * @param size The page size
+     * @return PagedResponse with products
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<ProductResponse> getAll(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepository.findAll(pageable);
+        
+        List<ProductResponse> content = productPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        
+        return new PagedResponse<>(
+                content,
+                productPage.getNumber(),
+                productPage.getSize(),
+                productPage.getTotalElements(),
+                productPage.getTotalPages(),
+                productPage.isFirst(),
+                productPage.isLast()
+        );
+    }
+
     @Transactional(readOnly = true)
     public List<ProductResponse> searchProducts(String query) {
         List<Product> products = productRepository.findByNameContainingIgnoreCase(query);
@@ -64,15 +94,17 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest request) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            // Check if product exists at all
-            if (!productRepository.existsById(productId)) {
-                return new NotFoundException("Product not found with id: " + productId);
+    public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId, boolean isAdmin) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
+
+        // Validate ownership: product must be in at least one shop owned by the user
+        if (!isAdmin) {
+            boolean ownsProduct = shopInventoryRepository.findByProductIdAndOwnerId(productId, ownerId).size() > 0;
+            if (!ownsProduct) {
+                throw new ForbiddenException("You don't have permission to update this product. Product must be in your shop inventory.");
             }
-            // Product exists but user doesn't own it
-            return new ForbiddenException("You don't have permission to update this product");
-        });
+        }
 
         Category category = resolveCategory(request);
         product.setName(request.getName());
@@ -84,15 +116,17 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long productId) {
-        Product product = productRepository.findById(productId).orElseThrow(() -> {
-            // Check if product exists at all
-            if (!productRepository.existsById(productId)) {
-                return new NotFoundException("Product not found with id: " + productId);
+    public void deleteProduct(Long productId, UUID ownerId, boolean isAdmin) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
+
+        // Validate ownership: product must be in at least one shop owned by the user
+        if (!isAdmin) {
+            boolean ownsProduct = shopInventoryRepository.findByProductIdAndOwnerId(productId, ownerId).size() > 0;
+            if (!ownsProduct) {
+                throw new ForbiddenException("You don't have permission to delete this product. Product must be in your shop inventory.");
             }
-            // Product exists but user doesn't own it
-            return new ForbiddenException("You don't have permission to delete this product");
-        });
+        }
 
         productRepository.delete(product);
     }

@@ -29,9 +29,10 @@ public class UserAddressService {
     @Transactional
     public UserAddressDto createAddress(UUID userId, UserAddressDto addressDto) {
         User user = userDao.findById(userId).orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
-
+        System.out.println("addressdto " + addressDto);
         UserAddress address = userAddressMapper.toEntity(addressDto);
 
+        System.out.println("address " + address);
         address.setUser(user);
 
         // full address

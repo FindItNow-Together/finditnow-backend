@@ -3,6 +3,7 @@ package com.finditnow.userservice.mapper;
 import com.finditnow.userservice.dto.UserDto;
 import com.finditnow.userservice.entity.User;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.NullValuePropertyMappingStrategy;
 
@@ -19,5 +20,6 @@ public interface UserMapper {
 
     List<UserDto> toDtoList(List<User> users);
 
+    @Mapping(target = "addresses",  ignore = true)
     void updateEntityFromDto(UserDto dto, @MappingTarget User entity);
 }
