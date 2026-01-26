@@ -36,8 +36,6 @@ public class ShopRequest {
     @DeliveryOption
     private String deliveryOption;
 
-    private Long categoryId;
-
     /**
      * Optional: ID of the owner to assign this shop to.
      * Only used if the requester is an ADMIN.

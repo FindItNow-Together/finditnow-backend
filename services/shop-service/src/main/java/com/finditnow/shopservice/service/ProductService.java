@@ -94,17 +94,9 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId, boolean isAdmin) {
+    public ProductResponse updateProduct(Long productId, ProductRequest request) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
-
-        // Validate ownership: product must be in at least one shop owned by the user
-        if (!isAdmin) {
-            boolean ownsProduct = shopInventoryRepository.findByProductIdAndOwnerId(productId, ownerId).size() > 0;
-            if (!ownsProduct) {
-                throw new ForbiddenException("You don't have permission to update this product. Product must be in your shop inventory.");
-            }
-        }
 
         Category category = resolveCategory(request);
         product.setName(request.getName());
@@ -116,17 +108,9 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(Long productId, UUID ownerId, boolean isAdmin) {
+    public void deleteProduct(Long productId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
-
-        // Validate ownership: product must be in at least one shop owned by the user
-        if (!isAdmin) {
-            boolean ownsProduct = shopInventoryRepository.findByProductIdAndOwnerId(productId, ownerId).size() > 0;
-            if (!ownsProduct) {
-                throw new ForbiddenException("You don't have permission to delete this product. Product must be in your shop inventory.");
-            }
-        }
 
         productRepository.delete(product);
     }

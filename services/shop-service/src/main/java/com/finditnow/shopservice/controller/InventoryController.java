@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
 public class InventoryController extends BaseController {
 
     private final ShopInventoryService shopInventoryService;
