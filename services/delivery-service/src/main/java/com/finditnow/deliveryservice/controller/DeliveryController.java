@@ -1,11 +1,9 @@
 package com.finditnow.deliveryservice.controller;
 
-import com.finditnow.deliveryservice.dto.DeliveryQuoteRequest;
-import com.finditnow.deliveryservice.dto.DeliveryQuoteResponse;
-import com.finditnow.deliveryservice.dto.InitiateDeliveryRequest;
-import com.finditnow.deliveryservice.entity.Delivery;
+import com.finditnow.deliveryservice.dto.*;
 import com.finditnow.deliveryservice.entity.DeliveryStatus;
 import com.finditnow.deliveryservice.service.DeliveryService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,35 +11,55 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/deliveries")
+@RequestMapping("/deliveries")
 @RequiredArgsConstructor
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
     @PostMapping("/calculate-quote")
-    public ResponseEntity<DeliveryQuoteResponse> calculateQuote(@RequestBody DeliveryQuoteRequest request) {
+    public ResponseEntity<DeliveryQuoteResponse> calculateQuote(
+            @Valid @RequestBody DeliveryQuoteRequest request) {
         return ResponseEntity.ok(deliveryService.calculateQuote(request));
     }
 
     @PostMapping("/initiate")
-    public ResponseEntity<Delivery> initiateDelivery(@RequestBody InitiateDeliveryRequest request) {
+    public ResponseEntity<DeliveryResponse> initiateDelivery(
+            @Valid @RequestBody InitiateDeliveryRequest request) {
         return ResponseEntity.ok(deliveryService.initiateDelivery(request));
     }
 
     @GetMapping("/order/{orderId}")
-    public ResponseEntity<Delivery> getDeliveryByOrder(@PathVariable UUID orderId) {
+    public ResponseEntity<DeliveryResponse> getDeliveryByOrder(
+            @PathVariable UUID orderId) {
         return ResponseEntity.ok(deliveryService.getDeliveryByOrderId(orderId));
     }
 
     @PutMapping("/{id}/status")
-    public ResponseEntity<Delivery> updateStatus(@PathVariable UUID id, @RequestBody StatusUpdateRequest request) {
+    public ResponseEntity<DeliveryResponse> updateStatus(
+            @PathVariable UUID id,
+            @Valid @RequestBody StatusUpdateRequest request) {
         return ResponseEntity.ok(deliveryService.updateStatus(id, request.getStatus()));
     }
 
-    // Tiny DTO for status update
-    @lombok.Data
-    public static class StatusUpdateRequest {
-        private DeliveryStatus status;
+    /**
+     * Get deliveries assigned to a specific agent with pagination and filtering
+     * @param userIdStr agent id
+     * @param status optional status filter
+     * @param page page number (0-indexed)
+     * @param limit page size
+     * @return paginated list of deliveries
+     */
+    @GetMapping("/mine")
+    public ResponseEntity<PagedDeliveryResponse> getMyDeliveries(
+            @RequestAttribute("userId") String userIdStr,
+            @RequestParam(required = false) DeliveryStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        UUID agentId = UUID.fromString(userIdStr);
+        PagedDeliveryResponse response = deliveryService.getDeliveriesByAgentId(
+                agentId, status, page, limit);
+        return ResponseEntity.ok(response);
     }
 }

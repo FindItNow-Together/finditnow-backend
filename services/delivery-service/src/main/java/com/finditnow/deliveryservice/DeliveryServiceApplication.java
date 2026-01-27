@@ -6,7 +6,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 @SpringBootApplication
-@ComponentScan(basePackages = { "com.finditnow.deliveryservice", "com.finditnow.shared" })
 public class DeliveryServiceApplication {
     public static void main(String[] args) {
         Database.setEnv("delivery_db");

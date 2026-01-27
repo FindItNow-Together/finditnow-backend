@@ -19,7 +19,7 @@ public class DeliveryClient {
 
     public void initiateDelivery(InitiateDeliveryRequest request) {
         try {
-            String url = deliveryServiceUrl + "/api/deliveries/initiate";
+            String url = deliveryServiceUrl + "/deliveries/initiate";
             restTemplate.postForObject(url, request, Object.class);
             log.info("Initiated delivery for order: {}", request.getOrderId());
         } catch (Exception e) {
@@ -30,7 +30,7 @@ public class DeliveryClient {
     public com.finditnow.orderservice.dtos.DeliveryQuoteResponse calculateQuote(
             com.finditnow.orderservice.dtos.DeliveryQuoteRequest request) {
         try {
-            String url = deliveryServiceUrl + "/api/deliveries/calculate-quote";
+            String url = deliveryServiceUrl + "/deliveries/calculate-quote";
             return restTemplate.postForObject(url, request,
                     com.finditnow.orderservice.dtos.DeliveryQuoteResponse.class);
         } catch (Exception e) {

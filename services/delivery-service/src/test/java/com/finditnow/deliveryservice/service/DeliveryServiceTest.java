@@ -2,6 +2,7 @@ package com.finditnow.deliveryservice.service;
 
 import com.finditnow.deliveryservice.dto.DeliveryQuoteRequest;
 import com.finditnow.deliveryservice.dto.DeliveryQuoteResponse;
+import com.finditnow.deliveryservice.dto.DeliveryResponse;
 import com.finditnow.deliveryservice.dto.InitiateDeliveryRequest;
 import com.finditnow.deliveryservice.entity.Delivery;
 import com.finditnow.deliveryservice.entity.DeliveryStatus;
@@ -75,7 +76,7 @@ public class DeliveryServiceTest {
             return d;
         });
 
-        Delivery delivery = deliveryService.initiateDelivery(initiateRequest);
+        DeliveryResponse delivery = deliveryService.initiateDelivery(initiateRequest);
 
         assertNotNull(delivery.getId());
         assertEquals(DeliveryStatus.PENDING, delivery.getStatus());
@@ -91,7 +92,7 @@ public class DeliveryServiceTest {
 
         when(deliveryRepository.save(any(Delivery.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Delivery delivery = deliveryService.initiateDelivery(initiateRequest);
+        DeliveryResponse delivery = deliveryService.initiateDelivery(initiateRequest);
 
         assertEquals(DeliveryStatus.DELIVERED, delivery.getStatus());
         assertEquals(DeliveryType.TAKEAWAY, delivery.getType());

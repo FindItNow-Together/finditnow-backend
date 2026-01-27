@@ -105,7 +105,8 @@ $ServiceDatabases = @(
     "auth_service",
     "user_service",
     "shop_service",
-    "order_service"
+    "order_service",
+    "delivery_db"
 )
 
 foreach ($db in $ServiceDatabases)
@@ -144,7 +145,8 @@ if ($wtPath) {
         new-tab --title "User Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:user-service:bootRun" `; `
         new-tab --title "Shop Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:shop-service:bootRun" `; `
         new-tab --title "Order Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:order-service:bootRun" `; `
-        new-tab --title "File Gateway" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:file-gateway:run"
+        new-tab --title "File Gateway" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:file-gateway:run" `; `
+        new-tab --title "Delivery Service" -d "$ROOT_DIR" cmd.exe /k "gradlew.bat :services:delivery-service:bootRun"
 
     Write-Host ">>>Opened Windows Terminal with service tabs."
 } else {
