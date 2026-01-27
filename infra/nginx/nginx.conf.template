@@ -19,13 +19,10 @@ upstream file_gateway_service_upstream {
     server host.docker.internal:${FILE_GATEWAY_SERVICE_PORT};
 }
 
-<<<<<<< HEAD
-=======
 upstream delivery_service_upstream {
     server host.docker.internal:${DELIVERY_SERVICE_PORT};
 }
 
->>>>>>> da72e1a (Update delivery system implementation)
 # ---------- CORS ORIGIN MAP ----------
 # Only allow known frontend origins
 map $http_origin $cors_origin {
@@ -154,8 +151,6 @@ server {
             proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-<<<<<<< HEAD
-=======
     # ---------- DELIVERY SERVICE ----------
     location /api/deliveries/ {
             add_header Access-Control-Allow-Origin $cors_origin always;
@@ -174,7 +169,6 @@ server {
             proxy_set_header X-Forwarded-Proto $scheme;
     }
 
->>>>>>> da72e1a (Update delivery system implementation)
     # ---------- FILE GATEWAY ----------
     location /api/files/ {
 

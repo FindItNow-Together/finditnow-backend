@@ -42,15 +42,12 @@ public class Order {
 
     private UUID deliveryAddressId;
 
-<<<<<<< HEAD
-=======
     private Double deliveryCharge;
 
     private String instructions;
 
     private String deliveryType;
 
->>>>>>> da72e1a (Update delivery system implementation)
     @Column(updatable = false)
     private LocalDateTime createdAt;
 

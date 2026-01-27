@@ -21,12 +21,7 @@ public class OrderController {
     @PostMapping("/from-cart")
     public ResponseEntity<OrderResponse> createOrderFromCart(
             @RequestBody CreateOrderFromCartRequest request,
-<<<<<<< HEAD
-            @RequestAttribute("userId") String userIdStr
-    ) {
-=======
             @RequestAttribute("userId") String userIdStr) {
->>>>>>> da72e1a (Update delivery system implementation)
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.createOrderFromCart(request, userId);
         return ResponseEntity.ok(order);
@@ -35,12 +30,7 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(
             @PathVariable UUID orderId,
-<<<<<<< HEAD
-            @RequestAttribute("userId") String userIdStr
-    ) {
-=======
             @RequestAttribute("userId") String userIdStr) {
->>>>>>> da72e1a (Update delivery system implementation)
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.getOrder(orderId, userId);
         return ResponseEntity.ok(order);
@@ -48,18 +38,11 @@ public class OrderController {
 
     @GetMapping("/mine")
     public ResponseEntity<List<OrderResponse>> getUserOrders(
-<<<<<<< HEAD
-            @RequestAttribute("userId") String userIdStr
-    ) {
-=======
             @RequestAttribute("userId") String userIdStr) {
->>>>>>> da72e1a (Update delivery system implementation)
         UUID userId = UUID.fromString(userIdStr);
         List<OrderResponse> orders = orderService.getUserOrders(userId);
         return ResponseEntity.ok(orders);
     }
-<<<<<<< HEAD
-=======
 
     @GetMapping("/quote")
     public ResponseEntity<com.finditnow.orderservice.dtos.DeliveryQuoteResponse> getQuote(
@@ -67,5 +50,4 @@ public class OrderController {
             @RequestParam UUID addressId) {
         return ResponseEntity.ok(orderService.getDeliveryQuote(shopId, addressId));
     }
->>>>>>> da72e1a (Update delivery system implementation)
 }
