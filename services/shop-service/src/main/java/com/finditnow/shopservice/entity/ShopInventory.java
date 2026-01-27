@@ -17,7 +17,11 @@ public class ShopInventory {
     private Long id;
 
     @Min(0)
+<<<<<<< HEAD
     private int reservedStock; //already reserved (in someone's cart)
+=======
+    int reservedStock; // already reserved (in someone's cart)
+>>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
 
     @Min(0)
     private float price;
@@ -29,7 +33,7 @@ public class ShopInventory {
     @JoinColumn(name = "shop_id")
     private Shop shop;
 
-    @OneToOne(fetch = FetchType.EAGER, cascade = CascadeType.ALL, orphanRemoval = true)
+    @ManyToOne(fetch = FetchType.EAGER, cascade = CascadeType.MERGE)
     @JoinColumn(name = "product_id")
     private Product product;
 }

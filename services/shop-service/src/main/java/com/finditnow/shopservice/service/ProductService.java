@@ -17,6 +17,8 @@ import com.finditnow.shopservice.repository.ShopInventoryRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,7 @@ public class ProductService {
     private final ShopInventoryRepository shopInventoryRepository;
     private final ProductMapper productMapper;
     private final CategoryRepository categoryRepository;
+    private final com.finditnow.shopservice.repository.ShopInventoryRepository shopInventoryRepository;
 
     @Transactional
     public ProductResponse addProduct(ProductRequest request, Long shopId, UUID ownerId) {
@@ -91,8 +94,42 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Returns all products with pagination support.
+     * 
+     * @param page The page number (0-indexed)
+     * @param size The page size
+     * @return PagedResponse with products
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<ProductResponse> getAll(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Product> productPage = productRepository.findAll(pageable);
+        
+        List<ProductResponse> content = productPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+        
+        return new PagedResponse<>(
+                content,
+                productPage.getNumber(),
+                productPage.getSize(),
+                productPage.getTotalElements(),
+                productPage.getTotalPages(),
+                productPage.isFirst(),
+                productPage.isLast()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> searchProducts(String query) {
+        List<Product> products = productRepository.findByNameContainingIgnoreCase(query);
+        return products.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
     @Transactional(readOnly = true)
     public ProductResponse getById(long id) {
+<<<<<<< HEAD
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No product of given id->" + id));
         return mapToResponse(product, product.getShopInventory());
@@ -100,6 +137,14 @@ public class ProductService {
 
     @Transactional
     public ProductResponse updateProduct(Long productId, ProductRequest request, UUID ownerId) {
+=======
+        return productMapper.toDto(productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No product of given id->" + id)));
+    }
+
+    @Transactional
+    public ProductResponse updateProduct(Long productId, ProductRequest request) {
+>>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
 
@@ -138,6 +183,7 @@ public class ProductService {
     }
 
     @Transactional
+<<<<<<< HEAD
     public void deleteProduct(Long productId, UUID ownerId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
@@ -152,6 +198,11 @@ public class ProductService {
         if (!shop.getOwnerId().equals(ownerId)) {
             throw new ForbiddenException("You don't have permission to delete this product");
         }
+=======
+    public void deleteProduct(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new NotFoundException("Product not found with id: " + productId));
+>>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
 
         productRepository.delete(product);
     }
@@ -188,8 +239,7 @@ public class ProductService {
             try {
                 Long categoryId = Long.parseLong(request.getCategoryId());
                 return categoryRepository.findById(categoryId)
-                        .orElseThrow(() ->
-                                new NotFoundException("Category not found with id: " + categoryId));
+                        .orElseThrow(() -> new NotFoundException("Category not found with id: " + categoryId));
             } catch (NumberFormatException e) {
                 throw new IllegalArgumentException("Invalid categoryId format");
             }
@@ -197,13 +247,13 @@ public class ProductService {
 
         if (request.getCategory() != null && !request.getCategory().isBlank()) {
             return categoryRepository.findByNameIgnoreCase(request.getCategory())
-                    .orElseThrow(() ->
-                            new NotFoundException("Category not found with name: " + request.getCategory()));
+                    .orElseThrow(() -> new NotFoundException("Category not found with name: " + request.getCategory()));
         }
 
         throw new IllegalArgumentException("Either categoryId or category name must be provided");
     }
 
+<<<<<<< HEAD
     private ProductResponse mapToResponse(Product product, ShopInventory inventory) {
         ProductResponse response = new ProductResponse();
         response.setId(product.getId());
@@ -221,13 +271,21 @@ public class ProductService {
         }
         
         return response;
+=======
+    private ProductResponse mapToResponse(Product product) {
+        return new ProductResponse(product.getId(), product.getName(), product.getDescription(),
+                mapCategory(product.getCategory()), product.getImageUrl());
+>>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
     }
 
     private CategoryResponse mapCategory(Category category) {
-        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(), category.getImageUrl(), category.getType());
+        return new CategoryResponse(category.getId(), category.getName(), category.getDescription(),
+                category.getImageUrl(), category.getType());
     }
 
     private PagedResponse<ProductResponse> mapToPagedResponse(Page<Product> userPage) {
-        return new PagedResponse<>(productMapper.toDtoList(userPage.getContent()), userPage.getNumber(), userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isFirst(), userPage.isLast());
+        return new PagedResponse<>(productMapper.toDtoList(userPage.getContent()), userPage.getNumber(),
+                userPage.getSize(), userPage.getTotalElements(), userPage.getTotalPages(), userPage.isFirst(),
+                userPage.isLast());
     }
 }

@@ -19,5 +19,5 @@ public class ShopResponse {
     private Double longitude;
     private String openHours;
     private String deliveryOption;
+    private CategoryResponse category;
 }
-
