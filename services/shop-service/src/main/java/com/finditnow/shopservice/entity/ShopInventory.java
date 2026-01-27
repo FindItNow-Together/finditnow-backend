@@ -17,11 +17,7 @@ public class ShopInventory {
     private Long id;
 
     @Min(0)
-<<<<<<< HEAD
-    private int reservedStock; //already reserved (in someone's cart)
-=======
-    int reservedStock; // already reserved (in someone's cart)
->>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
+    private int reservedStock; // already reserved (in someone's cart)
 
     @Min(0)
     private float price;

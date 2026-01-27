@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/cart")
+@RequestMapping({"/cart", "/api/cart", "/api/v1/cart"})
 @RequiredArgsConstructor
 public class CartController extends BaseController {
 

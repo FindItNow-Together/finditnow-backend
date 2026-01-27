@@ -285,6 +285,40 @@ public class ShopService {
     }
 
     /**
+     * Filtered shop search with pagination (used by /api/v1/shops/search).
+     * Location params are accepted for future distance-based sorting, but not used yet.
+     */
+    @Transactional(readOnly = true)
+    public PagedResponse<ShopResponse> searchShops(
+            String name,
+            String deliveryOption,
+            Double lat,
+            Double lng,
+            int page,
+            int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Shop> shopPage = shopRepository.searchShops(
+                (name == null || name.isBlank()) ? null : name,
+                (deliveryOption == null || deliveryOption.isBlank()) ? null : deliveryOption,
+                pageable);
+
+        List<ShopResponse> content = shopPage.getContent().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+
+        return new PagedResponse<>(
+                content,
+                shopPage.getNumber(),
+                shopPage.getSize(),
+                shopPage.getTotalElements(),
+                shopPage.getTotalPages(),
+                shopPage.isFirst(),
+                shopPage.isLast()
+        );
+    }
+
+    /**
      * Converts a Shop entity to a ShopResponse DTO.
      * This method extracts only the necessary information to send to the client.
      * 

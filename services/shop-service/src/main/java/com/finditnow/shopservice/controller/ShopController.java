@@ -1,11 +1,8 @@
 package com.finditnow.shopservice.controller;
 
-<<<<<<< HEAD
+import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.dto.ProductRequest;
 import com.finditnow.shopservice.dto.ProductResponse;
-=======
-import com.finditnow.shopservice.dto.PagedResponse;
->>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
 import com.finditnow.shopservice.service.ProductService;
@@ -46,8 +43,6 @@ public class ShopController extends BaseController {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // If admin and ownerId is provided, use it. Otherwise use the authenticated
-        // user's ID.
         UUID ownerId = (isAdmin && request.getOwnerId() != null) ? request.getOwnerId() : userId;
 
         ShopResponse response = shopService.registerShop(request, ownerId);
@@ -60,35 +55,22 @@ public class ShopController extends BaseController {
             Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
         UUID userId = extractUserId(authentication);
         PagedResponse<ShopResponse> shops = shopService.getShopsByOwner(userId, page, size);
         return ResponseEntity.ok(shops);
     }
 
-    /**
-     * Endpoint to get ALL shops in the system (ADMIN only).
-     * GET /api/v1/shops/all
-     * 
-     * @param page Page number (0-indexed, default: 0)
-     * @param size Page size (default: 10)
-     * @return ResponseEntity with paginated list of all shops
-     */
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PagedResponse<ShopResponse>> getAllShops(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
+
         PagedResponse<ShopResponse> shops = shopService.getAllShops(page, size);
         return ResponseEntity.ok(shops);
     }
 
-    /**
-     * Endpoint to get a specific shop by its ID.
-     * GET /api/v1/shops/{id}
-     * 
-     * @param id The shop ID from the URL path
-     * @return ResponseEntity with shop data
-     */
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ShopResponse> getShop(@PathVariable Long id) {
@@ -96,15 +78,6 @@ public class ShopController extends BaseController {
         return ResponseEntity.ok(shop);
     }
 
-    /**
-     * Endpoint to update a shop's information.
-     * PUT /api/v1/shops/{id}
-     * 
-     * @param id             The shop ID to update from the URL path
-     * @param request        The updated shop information
-     * @param authentication Spring Security authentication object
-     * @return ResponseEntity with updated shop data
-     */
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ShopResponse> updateShop(
@@ -120,14 +93,6 @@ public class ShopController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * Endpoint to delete a single shop.
-     * DELETE /api/v1/shops/{id}
-     * 
-     * @param id             The shop ID to delete from the URL path
-     * @param authentication Spring Security authentication object
-     * @return ResponseEntity with no content (HTTP 204) on success
-     */
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteShop(
@@ -142,18 +107,11 @@ public class ShopController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Endpoint to delete multiple shops at once (bulk delete).
-     * DELETE /api/v1/shops/bulk
-     * 
-     * @param shopIds        List of shop IDs to delete from the request body
-     * @param authentication Spring Security authentication object
-     * @return ResponseEntity with no content (HTTP 204) on success
-     */
     @DeleteMapping("/bulk")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteShops(
-            @RequestBody @NotEmpty(message = "Shop IDs list cannot be empty") List<@NotNull(message = "Shop ID cannot be null") Long> shopIds,
+            @RequestBody @NotEmpty(message = "Shop IDs list cannot be empty")
+            List<@NotNull(message = "Shop ID cannot be null") Long> shopIds,
             Authentication authentication) {
 
         UUID userId = extractUserId(authentication);
@@ -164,43 +122,29 @@ public class ShopController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-<<<<<<< HEAD
-     * Endpoint to add a product to a shop.
-     * POST /api/shop/{shopId}/products
-     */
+    /* ================= PRODUCT APIs ================= */
+
     @PostMapping("/{shopId}/products")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ProductResponse> addProduct(
             @PathVariable Long shopId,
             @Valid @RequestBody ProductRequest request,
             Authentication authentication) {
+
         UUID userId = extractUserId(authentication);
         ProductResponse response = productService.addProduct(request, shopId, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    /**
-     * Endpoint to get all products for a shop.
-     * GET /api/shop/{shopId}/products
-     */
     @GetMapping("/{shopId}/products")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
         List<ProductResponse> products = productService.getProductsByShop(shopId);
         return ResponseEntity.ok(products);
-=======
-     * Search and filter shops.
-     * GET /api/v1/shops/search
-     * 
-     * @param name           Optional shop name filter
-     * @param deliveryOption Optional delivery option filter (NO_DELIVERY, IN_HOUSE_DRIVER, THIRD_PARTY_PARTNER)
-     * @param lat            Optional latitude for distance-based sorting
-     * @param lng            Optional longitude for distance-based sorting
-     * @param page           Page number (0-indexed, default: 0)
-     * @param size           Page size (default: 10)
-     * @return ResponseEntity with paginated search results
-     */
+    }
+
+    /* ================= SEARCH API ================= */
+
     @GetMapping("/search")
     public ResponseEntity<PagedResponse<ShopResponse>> searchShops(
             @RequestParam(required = false) String name,
@@ -209,9 +153,10 @@ public class ShopController extends BaseController {
             @RequestParam(required = false) Double lng,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
-        PagedResponse<ShopResponse> shops = shopService.searchShops(name, deliveryOption, lat, lng, page, size);
+
+        PagedResponse<ShopResponse> shops =
+                shopService.searchShops(name, deliveryOption, lat, lng, page, size);
+
         return ResponseEntity.ok(shops);
->>>>>>> 49c6c06b8ddd591a5e5d2dd8ed7431f333caf104
     }
 }
