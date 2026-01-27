@@ -37,11 +37,12 @@ public class RedisStore {
         return store;
     }
 
-    public void putRefreshToken(String refreshToken, String sessionId, String profile, long ttlMillis) {
+    public void putRefreshToken(String refreshToken, String sessionId, String credId, String userId, String profile,
+            long ttlMillis) {
         System.out.println("TTLMillis: " + ttlMillis);
         try (Jedis j = pool.getResource()) {
             String key = "refresh:" + refreshToken;
-            String val = sessionId + "|" + profile;
+            String val = sessionId + "|" + credId + "|" + userId + "|" + profile;
             j.setex(key, ttlMillis / 1000L, val);
         }
     }
@@ -52,10 +53,12 @@ public class RedisStore {
             String val = j.get(key);
             if (val == null)
                 return null;
-            String[] parts = val.split("\\|", 2);
+            String[] parts = val.split("\\|", 4);
             Map<String, String> m = new HashMap<>();
-            m.put("userId", parts[0]);
-            m.put("profile", parts[1]);
+            m.put("sessionId", parts[0]);
+            m.put("credId", parts[1]);
+            m.put("userId", parts[2]);
+            m.put("profile", parts[3]);
             return m;
         }
     }

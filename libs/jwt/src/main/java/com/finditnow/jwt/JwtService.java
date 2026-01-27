@@ -1,11 +1,10 @@
 package com.finditnow.jwt;
 
 import com.finditnow.config.Config;
+import com.finditnow.jwt.exceptions.JwtExpiredException;
+import com.finditnow.jwt.exceptions.JwtInvalidException;
 import com.finditnow.redis.RedisStore;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jws;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 
 import javax.crypto.SecretKey;
@@ -16,7 +15,7 @@ import java.util.Map;
 
 public class JwtService {
     private final SecretKey key;
-    private final long accessTokenMillis = 15 * 60 * 1000L; // 15 min
+    private final long accessTokenMillis = 60 * 60 * 1000L; // 15 min
 
     public JwtService() {
         String secret = Config.get("JWT_SECRET", "VERY_LONG_unimaginable_SECRET111");
@@ -62,7 +61,17 @@ public class JwtService {
 
     // validate externally in code when needed
     public Jws<Claims> parseClaims(String token) {
-        return Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
+        try {
+            return Jwts.parser()
+                    .verifyWith(key)
+                    .build()
+                    .parseSignedClaims(token);
+
+        } catch (ExpiredJwtException e) {
+            throw new JwtExpiredException(e);
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new JwtInvalidException(e);
+        }
     }
 
     // get user info from the token

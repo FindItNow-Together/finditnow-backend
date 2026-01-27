@@ -14,3 +14,10 @@ ex. To run user-service: gradlew.bat :services:user-service:bootRun
 
 To Do
 Containerization of backend as a combined service, with individual service containers
+
+
+To create new service using gradle task use following command:
+windows(cmd): gradlew.bat createService -PserviceName=<service-name>
+linux terminal: gradlew createService -PserviceName=<service-name>
+This creates a new service inside the services folder with bare minimum folder structure and gradle build, may need borrowing of
+gradle build information from existing service gradle build files.

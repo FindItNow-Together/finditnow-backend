@@ -12,7 +12,7 @@ message UserProfile {
   string id = 1;
   string email = 2;
   string name = 3;
-  string avatar_url = 4;
+  string role = 4;
   google.protobuf.Timestamp created_at = 5;
   google.protobuf.Timestamp updated_at = 6;
 }
@@ -23,7 +23,12 @@ message CreateUserProfileRequest {
   string id = 1;
   string email = 2;
   string name = 3;
-  string avatar_url = 4;
+  string role = 4;
+}
+
+message UpdateUserRoleRequest {
+  string id = 1;
+  string role = 2;
 }
 
 // ------------------------ Responses ------------------------
@@ -32,10 +37,17 @@ message UserProfileResponse {
   UserProfile user = 1;
 }
 
+message UserRoleUpdateResponse {
+  string id = 1;
+  string message = 2;
+  optional string error = 3;
+}
+
 // ----------------------- Service --------------------------
 
 service UserService {
   rpc CreateUserProfile(CreateUserProfileRequest) returns (UserProfileResponse);
+  rpc UpdateUserRole(UpdateUserRoleRequest) returns (UserRoleUpdateResponse);
   rpc GetUserById(GetUserByIdRequest) returns (UserProfileResponse);
   rpc GetUserByEmail(GetUserByEmailRequest) returns (UserProfileResponse);
 }

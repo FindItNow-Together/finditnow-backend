@@ -1,11 +1,17 @@
 package com.finditnow.userservice.entity;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
 @Entity
 @Table(name = "user_addresses")
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class UserAddress {
 
     @Id
@@ -19,6 +25,12 @@ public class UserAddress {
     private String state;
     private String country;
     private String postalCode;
+    private boolean isPrimary;
+    private double latitude;
+    private double longitude;
+
+    @Enumerated(EnumType.STRING)
+    private AddressType addressType;
 
     // this is the concatenated human-readable string
     @Column(columnDefinition = "text")
@@ -27,6 +39,4 @@ public class UserAddress {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
-
-    // getters & setters...
 }
