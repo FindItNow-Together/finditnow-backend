@@ -56,3 +56,4 @@ public class Delivery {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
+

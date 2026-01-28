@@ -62,8 +62,6 @@ public class OrderService {
         }
         totalAmount += deliveryCharge;
 
-        System.out.println("Total amount: " + totalAmount);
-
         // 4. Create order entity
         Order order = new Order();
         order.setUserId(userId);
@@ -81,8 +79,6 @@ public class OrderService {
         order.setDeliveryType(request.getDeliveryType() != null ? request.getDeliveryType() : "PARTNER");
         order.setCreatedAt(LocalDateTime.now());
         order.setOrderItems(new ArrayList<>());
-
-        System.out.println("ORDER BEFORE CART ITEM>>>>" + order);
 
         // 5. Create order items
         for (CartItemDTO cartItem : cart.getItems()) {

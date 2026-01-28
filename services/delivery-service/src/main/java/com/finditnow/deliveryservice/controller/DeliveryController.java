@@ -6,6 +6,7 @@ import com.finditnow.deliveryservice.service.DeliveryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -36,6 +37,7 @@ public class DeliveryController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('DELIVERY_AGENT', 'ADMIN')")
     public ResponseEntity<DeliveryResponse> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody StatusUpdateRequest request) {
@@ -51,6 +53,7 @@ public class DeliveryController {
      * @return paginated list of deliveries
      */
     @GetMapping("/mine")
+    @PreAuthorize("hasRole('DELIVERY_AGENT')")
     public ResponseEntity<PagedDeliveryResponse> getMyDeliveries(
             @RequestAttribute("userId") String userIdStr,
             @RequestParam(required = false) DeliveryStatus status,
