@@ -28,6 +28,7 @@ include("libs:redis")
 include("libs:jwt")
 include("libs:mail")
 include("libs:quartz-scheduler")
+include("libs:interservice-caller")
 
 // Services
 include("services:auth")

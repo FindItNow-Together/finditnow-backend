@@ -27,6 +27,13 @@ public class JwtAuthHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String path = exchange.getRequestPath();
+
+        // Internal endpoints must bypass JWT logic entirely
+        if (path.startsWith("/internal/")) {
+            next.handleRequest(exchange);
+            return;
+        }
+
         boolean isPrivate = privateRoutes.contains(path);
 
         String authHeader =

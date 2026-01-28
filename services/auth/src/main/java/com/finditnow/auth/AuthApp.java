@@ -4,6 +4,7 @@ import com.finditnow.auth.config.DatabaseMigrations;
 import com.finditnow.auth.config.GrpcHealthChecker;
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
+import com.finditnow.auth.controller.ServiceTokenController;
 import com.finditnow.auth.dao.AuthDao;
 import com.finditnow.auth.server.HTTPServer;
 import com.finditnow.auth.service.AuthService;
@@ -39,8 +40,9 @@ public class AuthApp {
 
             OAuthService oauth = new OAuthService(authService, redis, jwt);
             OauthController oauthController = new OauthController(oauth);
+
             Scheduler.init();
-            new HTTPServer(authController, oauthController, jwt);
+            new HTTPServer(authController, oauthController, new ServiceTokenController(jwt), jwt);
         } catch (Exception e) {
             logger.error("Failed to start server", e);
             logger.error("SERVER DID NOT START! TERMINATING...");
