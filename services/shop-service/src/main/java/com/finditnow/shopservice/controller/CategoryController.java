@@ -6,12 +6,13 @@ import com.finditnow.shopservice.dto.CategoryResponse;
 import com.finditnow.shopservice.entity.CategoryType;
 import com.finditnow.shopservice.service.CategoryService;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping({"/api/v1/categories", "/api/categories"})
+@RequestMapping("/categories")
 public class CategoryController extends BaseController {
 
     private final CategoryService service;
@@ -21,6 +22,7 @@ public class CategoryController extends BaseController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'SHOP')")
     public ApiResponse<CategoryResponse> create(
             @Valid @RequestBody CategoryRequest request) {
 

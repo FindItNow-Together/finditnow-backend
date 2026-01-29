@@ -21,7 +21,7 @@ private Long id;
 ### 2. Missing Shop Update Endpoint
 **Issue**: No way to update shop information (name, address, hours, delivery options, etc.)
 
-**Recommendation**: Add `PUT /api/v1/shops/{id}` endpoint in `ShopController` and `updateShop()` method in `ShopService`.
+**Recommendation**: Add `PUT /api/shops/{id}` endpoint in `ShopController` and `updateShop()` method in `ShopService`.
 
 ### 3. Empty InventoryController
 **Issue**: `InventoryController` has placeholder endpoint but no implementation. No way to:
@@ -31,10 +31,10 @@ private Long id;
 - Get shop inventory
 
 **Recommendation**: Implement full CRUD operations:
-- `POST /api/v1/shops/{shopId}/inventory` - Add product to shop
-- `PUT /api/v1/inventory/{inventoryId}` - Update inventory
-- `DELETE /api/v1/inventory/{inventoryId}` - Remove from inventory
-- `GET /api/v1/shops/{shopId}/inventory` - Get shop inventory
+- `POST /api/shops/{shopId}/inventory` - Add product to shop
+- `PUT /api/inventory/{inventoryId}` - Update inventory
+- `DELETE /api/inventory/{inventoryId}` - Remove from inventory
+- `GET /api/shops/{shopId}/inventory` - Get shop inventory
 
 ### 4. Missing Product-to-Shop Linking
 **Issue**: Products are created globally but there's no endpoint to add them to a shop's inventory with stock/price.

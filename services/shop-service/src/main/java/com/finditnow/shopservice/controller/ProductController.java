@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/product")
 public class ProductController extends BaseController {
     private final ProductService productService;
 
@@ -23,7 +23,7 @@ public class ProductController extends BaseController {
         this.productService = productService;
     }
 
-    @PostMapping("/products")
+    @PostMapping("/add")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ProductResponse> addProduct(
             @Valid @RequestBody ProductRequest request,
@@ -34,7 +34,7 @@ public class ProductController extends BaseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @GetMapping("/products")
+    @GetMapping("/all")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<PagedResponse<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
@@ -42,7 +42,14 @@ public class ProductController extends BaseController {
         return ResponseEntity.ok(productService.getAll(page, size));
     }
 
-    @PutMapping("/products/{id}")
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<List<ProductResponse>> searchProducts(
+            @RequestParam String query) {
+        return ResponseEntity.ok(productService.searchProducts(query));
+    }
+
+    @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
@@ -55,7 +62,7 @@ public class ProductController extends BaseController {
         return ResponseEntity.ok(response);
     }
 
-    @DeleteMapping("/products/{id}")
+    @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
@@ -67,7 +74,7 @@ public class ProductController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/products/bulk")
+    @DeleteMapping("/bulk")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteProducts(
             @RequestBody List<Long> productIds,

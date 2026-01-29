@@ -37,11 +37,17 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // Public endpoints
-                        .requestMatchers("/search/**").permitAll()
-                        .requestMatchers("/categories/**").permitAll()
+                        .requestMatchers(
+                                "/search/**",
+                                "/categories/**",
+                                "/api/search/**",
+                                "/api/categories/**",
+                                "/api/categories/**",
+                                "/api/shops/search"
+                        ).permitAll()
 
-                        // Product endpoints (nginx strips /api/shop/ prefix, so service receives /products/**)
-                        .requestMatchers("/products/**").hasAnyRole("SHOP", "ADMIN")
+                        // Product endpoints
+                        .requestMatchers("/products/**", "/api/products/**").hasAnyRole("SHOP", "ADMIN")
 
                         // Shop endpoints are protected by @PreAuthorize on controller methods
                         // All other requests (shop endpoints) - let @PreAuthorize handle authorization

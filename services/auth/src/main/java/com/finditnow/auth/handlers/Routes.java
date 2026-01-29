@@ -11,7 +11,7 @@ public final class Routes {
 
     /**
      *
-     * @param auth controller for auth based routes
+     * @param auth  controller for auth based routes
      * @param oauth controller for oauth based routes
      * @return RoutingHandler from undertow which supports method and path matching
      */

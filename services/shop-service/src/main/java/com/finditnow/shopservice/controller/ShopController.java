@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/shops")
+@RequestMapping("/shop")
 @Validated
 public class ShopController extends BaseController {
 

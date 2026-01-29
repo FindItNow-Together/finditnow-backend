@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/shop/{shopId}")
 public class InventoryController extends BaseController {
 
     private final ShopInventoryService shopInventoryService;
@@ -31,7 +31,7 @@ public class InventoryController extends BaseController {
      * @param shopId The shop ID
      * @return ResponseEntity with list of inventory items
      */
-    @GetMapping("/shops/{shopId}/inventory")
+    @GetMapping("/inventory")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<InventoryResponse>> getShopInventory(@PathVariable Long shopId) {
         List<InventoryResponse> inventory = shopInventoryService.findAllByShopId(shopId);
@@ -61,7 +61,7 @@ public class InventoryController extends BaseController {
      * @param authentication Spring Security authentication object
      * @return ResponseEntity with created inventory item
      */
-    @PostMapping("/shops/{shopId}/inventory")
+    @PostMapping("/inventory/add")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<InventoryResponse> addInventory(
             @PathVariable Long shopId,
