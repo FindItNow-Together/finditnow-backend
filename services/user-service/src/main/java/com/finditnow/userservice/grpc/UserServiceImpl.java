@@ -1,5 +1,6 @@
 package com.finditnow.userservice.grpc;
 
+import com.finditnow.user.*;
 import com.finditnow.userservice.*;
 import com.finditnow.userservice.dao.UserDao;
 import com.finditnow.userservice.entity.User;

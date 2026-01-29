@@ -23,6 +23,6 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.shopId = :shopId AND o.status <> 'CANCELLED'")
     Double calculateTotalEarningsByShopId(@Param("shopId") Long shopId);
 
-    @Query("SELECT DISTINCT i.productName FROM Order o JOIN o.orderItems i WHERE o.shopId = :shopId ORDER BY o.createdAt DESC")
+    @Query("SELECT DISTINCT i.productName, o.createdAt FROM Order o JOIN o.orderItems i WHERE o.shopId = :shopId ORDER BY o.createdAt DESC")
     List<String> findRecentProductNamesByShopId(@Param("shopId") Long shopId, Pageable pageable);
 }
