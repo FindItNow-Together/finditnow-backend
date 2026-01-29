@@ -39,6 +39,15 @@ until docker exec "$(docker compose ps -q postgres)" pg_isready -U "${DB_USER:-d
     sleep 1
 done
 echo "> Postgres ready"
+echo "> Ensuring databases exist..."
+for db in "auth_service" "user_service" "shop_service" "order_service" "file_gateway" "review_system_db"; do
+    if ! docker exec "$(docker compose ps -q postgres)" psql -U "${DB_USER:-devuser}" -lqt | cut -d \| -f 1 | grep -qw "$db"; then
+        echo "Creating database: $db"
+        docker exec "$(docker compose ps -q postgres)" createdb -U "${DB_USER:-devuser}" "$db"
+    else
+        echo "Database $db already exists"
+    fi
+done
 
 # Wait for Redis
 echo "> Waiting for Redis..."

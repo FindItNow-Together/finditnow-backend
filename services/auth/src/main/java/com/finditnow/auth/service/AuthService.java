@@ -73,7 +73,8 @@ public class AuthService {
                 UUID userId = UUID.randomUUID();
                 String pwHash = PasswordUtil.hash(signUpReq.getPassword());
 
-                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(),
+                        pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
                 cred.setFirstName(signUpReq.getFirstName());
 
                 authDao.credDao.insert(conn, cred);
@@ -143,7 +144,8 @@ public class AuthService {
                 AuthSession authSession = createSessionInTransaction(conn, cred, "password");
 
                 // Generate tokens
-                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
+                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
+                        cred.getUserId().toString(), cred.getRole().toString());
 
                 // Store in Redis (outside DB transaction)
                 try {
@@ -208,7 +210,8 @@ public class AuthService {
 
         try {
             return transactionManager.executeInTransaction(conn -> {
-                AuthCredential cred = authDao.credDao.findById(credId).orElseThrow(() -> new RuntimeException("Credential not found"));
+                AuthCredential cred = authDao.credDao.findById(credId)
+                        .orElseThrow(() -> new RuntimeException("Credential not found"));
 
                 cred.setRole(Role.valueOf(role));
                 authDao.credDao.update(conn, cred);
@@ -258,7 +261,8 @@ public class AuthService {
                 // Create session
                 AuthSession authSession = createSessionInTransaction(conn, cred, "password");
 
-                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(), cred.getUserId().toString(), cred.getRole().toString());
+                String accessToken = jwt.generateAccessToken(authSession.getId().toString(), cred.getId().toString(),
+                        cred.getUserId().toString(), cred.getRole().toString());
 
                 // Store in Redis
                 try {
@@ -312,7 +316,8 @@ public class AuthService {
 
     public AuthCredential findCredentialByAuthProvider(String oauthSub) {
         try {
-            return transactionManager.executeInTransaction(conn -> authDao.credDao.findByOauthSubject(conn, oauthSub).orElse(null));
+            return transactionManager
+                    .executeInTransaction(conn -> authDao.credDao.findByOauthSubject(conn, oauthSub).orElse(null));
         } catch (Exception e) {
             throw new RuntimeException("Failed to credential by oauth subject", e);
         }
@@ -385,32 +390,43 @@ public class AuthService {
     }
 
     // Helper methods
-    private AuthSession createSessionInTransaction(Connection conn, AuthCredential cred, String sessionMethod) throws Exception {
-        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), sessionMethod, OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
+    private AuthSession createSessionInTransaction(Connection conn, AuthCredential cred, String sessionMethod)
+            throws Exception {
+        AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(),
+                sessionMethod, OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
 
         authDao.sessionDao.insert(conn, authSession);
         return authSession;
     }
 
     public void addSessionToRedis(AuthSession authSession, String userId, String role) throws Exception {
-        redis.putRefreshToken(authSession.getSessionToken(), authSession.getId().toString(), authSession.getCredId().toString(), userId, role, Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
+        redis.putRefreshToken(authSession.getSessionToken(), authSession.getId().toString(),
+                authSession.getCredId().toString(), userId, role,
+                Duration.between(OffsetDateTime.now(), authSession.getExpiresAt()).toMillis());
     }
 
     private String sendVerificationEmail(String email, String credId) {
         String emailOtp = OtpGenerator.generateSecureOtp(6);
 
-        mailer.send(email, "FindItNow: Email Verification", String.format("Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br>" + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>", emailOtp), true);
+        mailer.send(email, "FindItNow: Email Verification",
+                String.format(
+                        "Your email verification code: <strong style=\"font-size:18px\">%s</strong>.<br>"
+                                + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        emailOtp),
+                true);
 
         redis.setKey("emailOtp:" + credId, emailOtp, 2 * 60L);
         return emailOtp;
     }
 
     private void createUserProfile(AuthCredential cred) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"), Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"),
+                Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
 
         try {
             UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
-            var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString()).setEmail(cred.getEmail()).setName(cred.getFirstName()).setRole(cred.getRole().toString()).build());
+            var res = stub.createUserProfile(CreateUserProfileRequest.newBuilder().setId(cred.getUserId().toString())
+                    .setEmail(cred.getEmail()).setName(cred.getFirstName()).setRole(cred.getRole().toString()).build());
 
             if (!res.hasUser()) {
                 throw new RuntimeException("User profile creation failed");
@@ -421,7 +437,8 @@ public class AuthService {
     }
 
     private void updateUserRole(String userId, String role) {
-        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"), Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(Config.get("USER_SERVICE_GRPC_HOST", "localhost"),
+                Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"))).usePlaintext().build();
 
         try {
             UserServiceGrpc.UserServiceBlockingStub stub = UserServiceGrpc.newBlockingStub(channel);
@@ -488,7 +505,12 @@ public class AuthService {
         }
 
         String resetOtp = OtpGenerator.generateSecureOtp(8);
-        mailer.send(email, "Reset Password Token:Finditnow", String.format("Your reset password token: <strong style=\"font-size:18px\">%s</strong>.<br>" + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>", resetOtp), true);
+        mailer.send(email, "Reset Password Token:Finditnow",
+                String.format(
+                        "Your reset password token: <strong style=\"font-size:18px\">%s</strong>.<br>"
+                                + "<p style=\"font-weight:700\">This email is system generated. Do not reply</p>",
+                        resetOtp),
+                true);
 
         redis.setKey("resetOtp:" + email, resetOtp, Duration.ofMinutes(5).toSeconds());
 
@@ -574,17 +596,17 @@ public class AuthService {
         Map<String, String> data = new HashMap<>();
         Map<String, String> info = redis.getRefreshToken(refreshToken);
 
-        //session not in redis cache
+        // session not in redis cache
         if (info == null) {
             data.put("error", "invalid_token");
             return new AuthResponse(401, data);
         }
 
-        //recheck session for phantom cache entry
-        var updatedSession =  transactionManager.executeInTransaction(conn -> {
+        // recheck session for phantom cache entry
+        var updatedSession = transactionManager.executeInTransaction(conn -> {
             Optional<AuthSession> dbSession = authDao.sessionDao.findBySessionToken(conn, refreshToken);
 
-            //phantom cache entry check
+            // phantom cache entry check
             if (dbSession.isEmpty()) {
                 return null;
             }
@@ -601,13 +623,14 @@ public class AuthService {
             return finalDbSession;
         });
 
-        if(updatedSession == null) {
+        if (updatedSession == null) {
             redis.deleteRefreshToken(refreshToken);
             data.put("error", "invalid_refresh");
             return new AuthResponse(401, data);
         }
 
-        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"), info.get("profile"));
+        String newAccess = jwt.generateAccessToken(info.get("sessionId"), info.get("credId"), info.get("userId"),
+                info.get("profile"));
 
         data.put("accessToken", newAccess);
         data.put("profile", info.get("profile"));
@@ -617,7 +640,8 @@ public class AuthService {
 
     public AuthSession createSessionFromCred(AuthCredential cred, String sessionMethod) throws Exception {
         return transactionManager.executeInTransaction(conn -> {
-            AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(), sessionMethod, // or pass as parameter to distinguish oauth vs password
+            AuthSession authSession = new AuthSession(UUID.randomUUID(), cred.getId(), UUID.randomUUID().toString(),
+                    sessionMethod, // or pass as parameter to distinguish oauth vs password
                     OffsetDateTime.now().plusSeconds(refreshTokenMaxLifeSeconds));
 
             authDao.sessionDao.insert(conn, authSession);
