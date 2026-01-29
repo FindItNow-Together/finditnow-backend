@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/shops").hasRole("ADMIN") // Get all shops (ADMIN only)
                         .requestMatchers(HttpMethod.POST, "/api/v1/shops").hasAnyRole("SHOP", "ADMIN") // Create shop
                                                                                                        // (SHOP/ADMIN)
+                        .requestMatchers(HttpMethod.GET, "/api/v1/shops/{id}").permitAll() // Get shop details (Public)
                         .requestMatchers("/api/v1/shops/**").hasAnyRole("SHOP", "ADMIN") // All other shop endpoints
 
                         // Product endpoints
@@ -59,16 +60,18 @@ public class SecurityConfig {
         return http.build();
     }
 
-//    @Bean
-//    public CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(Arrays.asList("*"));
-//        configuration.setAllowCredentials(true);
-//
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
-//    }
+    // @Bean
+    // public CorsConfigurationSource corsConfigurationSource() {
+    // CorsConfiguration configuration = new CorsConfiguration();
+    // configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+    // configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",
+    // "OPTIONS"));
+    // configuration.setAllowedHeaders(Arrays.asList("*"));
+    // configuration.setAllowCredentials(true);
+    //
+    // UrlBasedCorsConfigurationSource source = new
+    // UrlBasedCorsConfigurationSource();
+    // source.registerCorsConfiguration("/**", configuration);
+    // return source;
+    // }
 }

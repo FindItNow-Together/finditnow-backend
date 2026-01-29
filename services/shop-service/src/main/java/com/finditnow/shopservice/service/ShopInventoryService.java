@@ -29,4 +29,8 @@ public class ShopInventoryService {
     public List<InventoryResponse> searchByProductName(String prodName) {
         return inventoryMapper.toDtoList(shopInventoryRepository.searchByProductName(prodName));
     }
+
+    public List<InventoryResponse> searchByProductName(String prodName, Long shopId) {
+        return inventoryMapper.toDtoList(shopInventoryRepository.searchByProductNameAndShopId(prodName, shopId));
+    }
 }
