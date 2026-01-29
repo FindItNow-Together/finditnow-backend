@@ -9,6 +9,7 @@ import com.finditnow.orderservice.entities.OrderItem;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -56,8 +57,7 @@ public class OrderService {
         order.setPaymentMethod(
                 "online".equals(request.getPaymentMethod())
                         ? Order.PaymentMethod.ONLINE
-                        : Order.PaymentMethod.CASH_ON_DELIVERY
-        );
+                        : Order.PaymentMethod.CASH_ON_DELIVERY);
         order.setPaymentStatus(Order.PaymentStatus.PENDING);
         order.setTotalAmount(totalAmount);
         order.setDeliveryAddressId(request.getAddressId());
@@ -110,6 +110,21 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    public Page<OrderResponse> getShopOrders(Long shopId, int page, int size) {
+        // In a real scenario, you'd verify if the authenticated user owns this shop
+        return orderDao.findByShopId(shopId, page, size)
+                .map(this::mapToOrderResponse);
+    }
+
+    public Double getShopEarnings(Long shopId) {
+        Double earnings = orderDao.calculateTotalEarnings(shopId);
+        return earnings != null ? earnings : 0.0;
+    }
+
+    public List<String> getRecentShopProducts(Long shopId) {
+        return orderDao.findRecentProducts(shopId);
+    }
+
     @Transactional
     public void confirmOrderPayment(UUID orderId) {
         Order order = orderDao.findById(orderId)
@@ -125,30 +140,30 @@ public class OrderService {
     private CartDTO fetchCart(UUID cartId, UUID userId) {
 
         return TestCartData.getCartById(cartId);
-//        try {
-//            String url = CART_SERVICE_URL + "/api/cart/" + cartId;
-//            // Add authentication headers as needed
-//            RestTemplate restTemplate = new RestTemplate();
-//
-//            return restTemplate.getForObject(url, CartDTO.class);
-//        } catch (Exception e) {
-//            log.error("Failed to fetch cart: {}", cartId, e);
-//            throw new RuntimeException("Failed to fetch cart");
-//        }
+        // try {
+        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
+        // // Add authentication headers as needed
+        // RestTemplate restTemplate = new RestTemplate();
+        //
+        // return restTemplate.getForObject(url, CartDTO.class);
+        // } catch (Exception e) {
+        // log.error("Failed to fetch cart: {}", cartId, e);
+        // throw new RuntimeException("Failed to fetch cart");
+        // }
     }
 
     private void clearCart(UUID cartId, UUID userId) {
-//        try {
-//            String url = CART_SERVICE_URL + "/api/cart/" + cartId;
-//
-//            RestTemplate restTemplate = new RestTemplate();
-//
-//            restTemplate.delete(url);
-//            log.info("Cart {} cleared after order creation", cartId);
-//        } catch (Exception e) {
-//            log.warn("Failed to clear cart: {}", cartId, e);
-//            // Don't fail order creation if cart clear fails
-//        }
+        // try {
+        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
+        //
+        // RestTemplate restTemplate = new RestTemplate();
+        //
+        // restTemplate.delete(url);
+        // log.info("Cart {} cleared after order creation", cartId);
+        // } catch (Exception e) {
+        // log.warn("Failed to clear cart: {}", cartId, e);
+        // // Don't fail order creation if cart clear fails
+        // }
     }
 
     private OrderResponse mapToOrderResponse(Order order) {

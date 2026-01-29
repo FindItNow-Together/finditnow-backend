@@ -19,7 +19,7 @@ public class GrpcServerConfig {
                 .build()
                 .start();
         System.out.println(
-                ">>> [GrpcServerConfig] gRPC Server Started on " + Config.get("USER_SERVICE_GRPC_PORT", "8083"));
+                ">>> [GrpcServerConfig] gRPC SeOrver Started on " + Config.get("USER_SERVICE_GRPC_PORT", "8083"));
         return server;
     }
 }

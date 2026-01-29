@@ -3,6 +3,7 @@ package com.finditnow.orderservice.controllers;
 import com.finditnow.orderservice.dtos.CreateOrderFromCartRequest;
 import com.finditnow.orderservice.dtos.OrderResponse;
 import com.finditnow.orderservice.services.OrderService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,8 +22,7 @@ public class OrderController {
     @PostMapping("/from-cart")
     public ResponseEntity<OrderResponse> createOrderFromCart(
             @RequestBody CreateOrderFromCartRequest request,
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.createOrderFromCart(request, userId);
         return ResponseEntity.ok(order);
@@ -31,8 +31,7 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(
             @PathVariable UUID orderId,
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.getOrder(orderId, userId);
         return ResponseEntity.ok(order);
@@ -40,10 +39,30 @@ public class OrderController {
 
     @GetMapping("/mine")
     public ResponseEntity<List<OrderResponse>> getUserOrders(
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         List<OrderResponse> orders = orderService.getUserOrders(userId);
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<Page<OrderResponse>> getShopOrders(
+            @PathVariable Long shopId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getShopOrders(shopId, page, size));
+    }
+
+    @GetMapping("/shop/{shopId}/earnings")
+    public ResponseEntity<Double> getShopEarnings(@PathVariable Long shopId) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getShopEarnings(shopId));
+    }
+
+    @GetMapping("/shop/{shopId}/recent-products")
+    public ResponseEntity<List<String>> getRecentShopProducts(@PathVariable Long shopId) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getRecentShopProducts(shopId));
     }
 }

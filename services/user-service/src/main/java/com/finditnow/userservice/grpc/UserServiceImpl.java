@@ -1,6 +1,6 @@
 package com.finditnow.userservice.grpc;
 
-import com.finditnow.user.*;
+import com.finditnow.userservice.*;
 import com.finditnow.userservice.dao.UserDao;
 import com.finditnow.userservice.entity.User;
 import io.grpc.stub.StreamObserver;
@@ -27,7 +27,8 @@ public class UserServiceImpl extends UserServiceGrpc.UserServiceImplBase {
 
         userDao.save(user);
 
-        var profile = UserProfile.newBuilder().setId(req.getId()).setEmail(req.getEmail()).setName(req.getName()).build();
+        var profile = UserProfile.newBuilder().setId(req.getId()).setEmail(req.getEmail()).setName(req.getName())
+                .build();
 
         resp.onNext(UserProfileResponse.newBuilder().setUser(profile).build());
         resp.onCompleted();
@@ -38,17 +39,18 @@ public class UserServiceImpl extends UserServiceGrpc.UserServiceImplBase {
         User user = userDao.findById(UUID.fromString(request.getId())).orElse(null);
 
         if (user == null) {
-            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Update failed").setError("No such user").build());
+            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                    .setMessage("Update failed").setError("No such user").build());
             responseObserver.onCompleted();
             return;
         }
-
 
         user.setRole(request.getRole());
 
         userDao.save(user);
 
-        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Role updated successfully to: " + request.getRole()).build());
+        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                .setMessage("Role updated successfully to: " + request.getRole()).build());
         responseObserver.onCompleted();
     }
 }
