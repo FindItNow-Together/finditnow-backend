@@ -1,6 +1,7 @@
 package com.finditnow.shopservice.service;
 
 import com.finditnow.shopservice.dto.AddToCartRequest;
+import com.finditnow.shopservice.dto.CartPricingResponse;
 import com.finditnow.shopservice.dto.CartResponse;
 import com.finditnow.shopservice.dto.UpdateCartItemRequest;
 
@@ -55,4 +56,6 @@ public interface CartService {
      * Mark a cart as converted (to order)
      */
     void markCartAsConverted(UUID cartId);
+
+    CartPricingResponse calculatePricing(UUID userId, UUID cartId);
 }

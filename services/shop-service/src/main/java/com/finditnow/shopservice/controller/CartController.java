@@ -1,6 +1,7 @@
 package com.finditnow.shopservice.controller;
 
 import com.finditnow.shopservice.dto.AddToCartRequest;
+import com.finditnow.shopservice.dto.CartPricingResponse;
 import com.finditnow.shopservice.dto.CartResponse;
 import com.finditnow.shopservice.dto.UpdateCartItemRequest;
 import com.finditnow.shopservice.service.CartService;
@@ -125,5 +126,20 @@ public class CartController extends BaseController {
         UUID userId = extractUserId(authentication);
         cartService.clearCart(userId, cartId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Get pricing for a cart
+     * GET /api/cart/{cartId}/pricing
+     */
+    @GetMapping("/{cartId}/pricing")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<CartPricingResponse> getCartPricing(
+            Authentication authentication,
+            @PathVariable UUID cartId
+    ) {
+        UUID userId = extractUserId(authentication);
+        CartPricingResponse pricing = cartService.calculatePricing(userId, cartId);
+        return ResponseEntity.ok(pricing);
     }
 }

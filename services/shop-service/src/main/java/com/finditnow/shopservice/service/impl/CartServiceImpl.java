@@ -1,6 +1,7 @@
 package com.finditnow.shopservice.service.impl;
 
 import com.finditnow.shopservice.dto.AddToCartRequest;
+import com.finditnow.shopservice.dto.CartPricingResponse;
 import com.finditnow.shopservice.dto.CartResponse;
 import com.finditnow.shopservice.dto.UpdateCartItemRequest;
 import com.finditnow.shopservice.entity.Cart;
@@ -239,5 +240,44 @@ public class CartServiceImpl implements CartService {
             }
         }
         // If diff <= 0, we're decreasing quantity, no stock check needed
+    }
+
+    @Override
+    public CartPricingResponse calculatePricing(UUID userId, UUID cartId) {
+        Cart cart = getCartByIdAndUser(cartId, userId);
+
+        int itemsTotal = cart.getItems().stream()
+                .mapToInt(i -> (int)i.getShopInventory().getPrice() * i.getQuantity())
+                .sum();
+
+        int tax = calculateTax(itemsTotal);
+        int deliveryFee = calculateDeliveryFee(cart);
+        int payable = itemsTotal + tax + deliveryFee;
+
+        return new CartPricingResponse(deliveryFee, tax, payable);
+    }
+
+    private Cart getCartByIdAndUser(UUID cartId, UUID userId) {
+        Cart cart = cartRepository.findByIdWithDetails(cartId)
+                .orElseThrow(() -> new CartNotFoundException(
+                        "Cart not found with id: " + cartId));
+
+        if (!cart.getUserId().equals(userId)) {
+            throw new RuntimeException("You don't have permission to access this cart");
+        }
+
+        if (cart.getStatus() != CartStatus.ACTIVE) {
+            throw new BadRequestException("Cart is not active");
+        }
+
+        return cart;
+    }
+
+    private int calculateTax(int amount) {
+        return (int) (amount * 0.05); //produce based on dynamic env attributes
+    }
+
+    private int calculateDeliveryFee(Cart cart) {
+        return 100; //fetch from delivery service
     }
 }
