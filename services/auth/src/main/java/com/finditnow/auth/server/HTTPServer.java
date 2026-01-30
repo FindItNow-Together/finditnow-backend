@@ -41,7 +41,7 @@ public class HTTPServer {
                 root.handleRequest(exchange);
             } catch (Exception ex) {
                 logger.error("Error occurred during {}, Message: {}", exchange.getRequestPath(), ex.getMessage());
-                if(!exchange.isResponseStarted()){
+                if (!exchange.isResponseStarted()) {
                     exchange.setStatusCode(500);
                     exchange.getResponseSender().send("{\"error\": \"Internal Server Error\"}");
                 }

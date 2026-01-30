@@ -1,7 +1,11 @@
 package com.finditnow.shopservice.controller;
 
+import com.finditnow.shopservice.dto.PagedResponse;
+import com.finditnow.shopservice.dto.ProductRequest;
+import com.finditnow.shopservice.dto.ProductResponse;
 import com.finditnow.shopservice.dto.ShopRequest;
 import com.finditnow.shopservice.dto.ShopResponse;
+import com.finditnow.shopservice.service.ProductService;
 import com.finditnow.shopservice.service.ShopService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,13 +21,16 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
+@RequestMapping("/shop")
 @Validated
 public class ShopController extends BaseController {
 
     private final ShopService shopService;
+    private final ProductService productService;
 
-    public ShopController(ShopService shopService) {
+    public ShopController(ShopService shopService, ProductService productService) {
         this.shopService = shopService;
+        this.productService = productService;
     }
 
     @PostMapping("/add")
@@ -36,8 +43,6 @@ public class ShopController extends BaseController {
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
 
-        // If admin and ownerId is provided, use it. Otherwise use the authenticated
-        // user's ID.
         UUID ownerId = (isAdmin && request.getOwnerId() != null) ? request.getOwnerId() : userId;
 
         ShopResponse response = shopService.registerShop(request, ownerId);
@@ -46,47 +51,47 @@ public class ShopController extends BaseController {
 
     @GetMapping("/mine")
     @PreAuthorize("hasRole('SHOP')")
-    public ResponseEntity<List<ShopResponse>> getMyShops(Authentication authentication) {
+    public ResponseEntity<PagedResponse<ShopResponse>> getMyShops(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
         UUID userId = extractUserId(authentication);
-        List<ShopResponse> shops = shopService.getShopsByOwner(userId);
+        PagedResponse<ShopResponse> shops = shopService.getShopsByOwner(userId, page, size);
         return ResponseEntity.ok(shops);
     }
 
-    /**
-     * Endpoint to get ALL shops in the system (ADMIN only).
-     * GET /api/v1/shops
-     * 
-     * @return ResponseEntity with list of all shops
-     */
     @GetMapping("/all")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<ShopResponse>> getAllShops() {
-        List<ShopResponse> shops = shopService.getAllShops();
+    public ResponseEntity<PagedResponse<ShopResponse>> getAllShops(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        PagedResponse<ShopResponse> shops = shopService.getAllShops(page, size);
         return ResponseEntity.ok(shops);
     }
 
-    /**
-     * Endpoint to get a specific shop by its ID.
-     * GET /api/v1/shops/{id}
-     * 
-     * @param id The shop ID from the URL path
-     * @return ResponseEntity with shop data
-     */
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ShopResponse> getShop(@PathVariable Long id) {
         ShopResponse shop = shopService.getShopById(id);
         return ResponseEntity.ok(shop);
     }
 
-    /**
-     * Endpoint to delete a single shop.
-     * DELETE /api/v1/shops/{id}
-     * 
-     * @param id             The shop ID to delete from the URL path
-     * @param authentication Spring Security authentication object
-     * @return ResponseEntity with no content (HTTP 204) on success
-     */
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<ShopResponse> updateShop(
+            @PathVariable Long id,
+            @Valid @RequestBody ShopRequest request,
+            Authentication authentication) {
+
+        UUID userId = extractUserId(authentication);
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+
+        ShopResponse response = shopService.updateShop(id, request, userId, isAdmin);
+        return ResponseEntity.ok(response);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteShop(
@@ -101,18 +106,11 @@ public class ShopController extends BaseController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Endpoint to delete multiple shops at once (bulk delete).
-     * DELETE /api/v1/shops/bulk
-     * 
-     * @param shopIds        List of shop IDs to delete from the request body
-     * @param authentication Spring Security authentication object
-     * @return ResponseEntity with no content (HTTP 204) on success
-     */
     @DeleteMapping("/bulk")
     @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<Void> deleteShops(
-            @RequestBody @NotEmpty(message = "Shop IDs list cannot be empty") List<@NotNull(message = "Shop ID cannot be null") Long> shopIds,
+            @RequestBody @NotEmpty(message = "Shop IDs list cannot be empty")
+            List<@NotNull(message = "Shop ID cannot be null") Long> shopIds,
             Authentication authentication) {
 
         UUID userId = extractUserId(authentication);
@@ -121,5 +119,42 @@ public class ShopController extends BaseController {
 
         shopService.deleteShops(shopIds, userId, isAdmin);
         return ResponseEntity.noContent().build();
+    }
+
+    /* ================= PRODUCT APIs ================= */
+
+    @PostMapping("/{shopId}/products")
+    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    public ResponseEntity<ProductResponse> addProduct(
+            @PathVariable Long shopId,
+            @Valid @RequestBody ProductRequest request,
+            Authentication authentication) {
+
+        UUID userId = extractUserId(authentication);
+        ProductResponse response = productService.addProduct(request, shopId, userId);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/{shopId}/products")
+    public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
+        List<ProductResponse> products = productService.getProductsByShop(shopId);
+        return ResponseEntity.ok(products);
+    }
+
+    /* ================= SEARCH API ================= */
+
+    @GetMapping("/search")
+    public ResponseEntity<PagedResponse<ShopResponse>> searchShops(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String deliveryOption,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        PagedResponse<ShopResponse> shops =
+                shopService.searchShops(name, deliveryOption, lat, lng, page, size);
+
+        return ResponseEntity.ok(shops);
     }
 }

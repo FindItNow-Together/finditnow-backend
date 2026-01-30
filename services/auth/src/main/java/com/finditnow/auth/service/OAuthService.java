@@ -4,10 +4,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.auth.dto.AuthResponse;
 import com.finditnow.auth.model.AuthCredential;
 import com.finditnow.auth.model.AuthSession;
-import org.slf4j.Logger;
 import com.finditnow.config.Config;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.redis.RedisStore;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
@@ -34,7 +34,7 @@ public class OAuthService {
     }
 
     public void saveOauthState(String state) {
-        redis.setKey("oauth_state" + state, "1", 15*60);
+        redis.setKey("oauth_state" + state, "1", 15 * 60);
     }
 
     public boolean existsOauthState(String state) {
@@ -44,7 +44,7 @@ public class OAuthService {
     /**
      * Handles Google OAuth authentication flow
      *
-     * @param idToken     The Google ID token from the client
+     * @param idToken The Google ID token from the client
      * @return AuthResponse containing access_token and refresh_token
      */
     public AuthResponse handleGoogleAuth(String idToken) {
@@ -77,12 +77,12 @@ public class OAuthService {
             // Find or create user account
             AuthCredential cred = authService.findCredentialByAuthProvider(sub);
 
-            if(cred==null){
+            if (cred == null) {
                 cred = authService.findCredentialByEmail(email);
 
-                if(cred==null){
+                if (cred == null) {
                     cred = authService.findOrCreateCredWithOauth(sub, email);
-                }else{
+                } else {
                     authService.createOauthByExistingCred(sub, email, cred.getUserId());
                 }
             }

@@ -26,6 +26,10 @@ dependencies {
     // https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator
     implementation("org.hibernate.validator:hibernate-validator:9.0.1.Final")
 
+
+        implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
+
+
     // https://mvnrepository.com/artifact/org.projectlombok/lombok
     implementation("org.projectlombok:lombok:1.18.42")
     annotationProcessor("org.projectlombok:lombok:1.18.42")

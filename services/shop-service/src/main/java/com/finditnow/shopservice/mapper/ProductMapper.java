@@ -17,14 +17,11 @@ public interface ProductMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "shopInventory", ignore = true)
     Product toEntity(ProductRequest request);
 
     List<ProductResponse> toDtoList(List<Product> products);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "category", ignore = true)
-    @Mapping(target = "shopInventory", ignore = true)
     void updateEntityFromDto(ProductRequest dto, @MappingTarget Product entity);
 }
-

@@ -16,8 +16,8 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    private ShopInventory shopInventory;
+    // Removed OneToOne shopInventory to allow 1 Product -> N ShopInventories
+    // (Global Catalog)
 
     @Column(nullable = false)
     private String name;
@@ -32,4 +32,3 @@ public class Product {
     @Column(name = "image_url")
     private String imageUrl;
 }
-
