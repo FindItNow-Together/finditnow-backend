@@ -67,8 +67,10 @@ public class Shop {
 
         ShopInventory newInventory = new ShopInventory();
         newInventory.setProduct(product);
+        newInventory.setShop(this);
         newInventory.setStock(stock);
         newInventory.setPrice(price);
+        newInventory.setReservedStock(0);
         shopInventory.add(newInventory);
     }
 

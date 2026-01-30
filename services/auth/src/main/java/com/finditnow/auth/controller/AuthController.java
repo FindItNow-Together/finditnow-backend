@@ -5,9 +5,9 @@ import com.finditnow.auth.dto.SignUpDto;
 import com.finditnow.auth.handlers.JwtAuthHandler;
 import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.types.Role;
-import org.slf4j.Logger;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.server.handlers.Cookie;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;

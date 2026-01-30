@@ -95,4 +95,24 @@ public class SearchService {
 
         return response;
     }
+
+    public GlobalSearchResponse globalSearch(String query, Double lat, Double lng, int shopLimit, int productLimit) {
+        // Search shops
+        List<ShopResponse> allShops = shopService.searchShops(query);
+        List<ShopResponse> shops = allShops;
+        if (shopLimit > 0 && shops.size() > shopLimit) {
+            shops = shops.subList(0, shopLimit);
+        }
+
+        // Search products (using existing method)
+        PagedResponse<SearchOpportunityResponse> productResults = searchProducts(query, lat, lng, "BOTH", 0, productLimit);
+
+        // Build response
+        return GlobalSearchResponse.builder()
+                .shops(shops)
+                .products(productResults.getContent())
+                .totalShops((long) allShops.size())
+                .totalProducts(productResults.getTotalElements())
+                .build();
+    }
 }
