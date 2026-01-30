@@ -18,4 +18,10 @@ public class CartItemResponse {
     private Long inventoryId;
     private Integer quantity;
     private LocalDateTime addedAt;
+
+    // Product details for display (NEW FIELDS)
+    private Long productId;
+    private String productName;
+    private Float price;
+    private Float itemSubtotal;
 }

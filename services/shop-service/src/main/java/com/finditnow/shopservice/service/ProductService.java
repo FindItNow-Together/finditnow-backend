@@ -229,13 +229,13 @@ public class ProductService {
         response.setCategory(mapCategory(product.getCategory()));
         response.setImageUrl(product.getImageUrl());
         
-        if (inventory != null) {
-            response.setPrice(inventory.getPrice());
-            response.setStock(inventory.getStock());
-            if (inventory.getShop() != null) {
-                response.setShopId(inventory.getShop().getId());
-            }
-        }
+//        if (inventory != null) {
+//            response.setPrice(inventory.getPrice());
+//            response.setStock(inventory.getStock());
+//            if (inventory.getShop() != null) {
+//                response.setShopId(inventory.getShop().getId());
+//            }
+//        }
         
         return response;
     }

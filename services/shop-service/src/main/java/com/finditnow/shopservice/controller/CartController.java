@@ -21,6 +21,10 @@ public class CartController extends BaseController {
 
     private final CartService cartService;
 
+    /**
+     * Add an item to the cart
+     * POST /api/cart/add
+     */
     @PostMapping("/add")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CartResponse> addItemToCart(
@@ -31,41 +35,64 @@ public class CartController extends BaseController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    /**
+     * Update cart item quantity
+     * PUT /api/cart/item/{itemId}
+     *
+     * SECURITY FIX: Now validates that the cart item belongs to the authenticated user
+     */
     @PutMapping("/item/{itemId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CartResponse> updateCartItem(
+            Authentication authentication,
             @PathVariable UUID itemId,
             @Valid @RequestBody UpdateCartItemRequest request) {
-        // IDOR vulnerability potential here, but keeping consistent with original
-        // service logic for now
-        // Ideally we should check if the cart item belongs to the authenticated user
-        CartResponse response = cartService.updateCartItem(itemId, request);
+        UUID userId = extractUserId(authentication);
+        CartResponse response = cartService.updateCartItem(userId, itemId, request);
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Remove an item from the cart
+     * DELETE /api/cart/item/{itemId}
+     *
+     * SECURITY FIX: Now validates that the cart item belongs to the authenticated user
+     */
     @DeleteMapping("/item/{itemId}")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> removeCartItem(@PathVariable UUID itemId) {
-        cartService.removeCartItem(itemId);
+    public ResponseEntity<Void> removeCartItem(
+            Authentication authentication,
+            @PathVariable UUID itemId) {
+        UUID userId = extractUserId(authentication);
+        cartService.removeCartItem(userId, itemId);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/user/me/shop/{shopId}")
+    /**
+     * Get current user's cart for a specific shop
+     * GET /api/cart/user/me/shop/{shopId}
+     *
+     * RECOMMENDED ENDPOINT: Uses authenticated user from token
+     */
+    @GetMapping("/user/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CartResponse> getMyCart(
-            Authentication authentication,
-            @PathVariable Long shopId) {
+            Authentication authentication) {
         UUID userId = extractUserId(authentication);
-        CartResponse response = cartService.getCartByUserAndShop(userId, shopId);
+        CartResponse response = cartService.getUserCart(userId);
         return ResponseEntity.ok(response);
     }
 
-    // Retaining the original endpoint style as well just to be safe for migration
-    // compatibility
-    // but ignoring path variable userId and using auth token instead?
-    // The original was /user/{userId}/shop/{shopId}
-    // If I keep the path, I should ensure path userId matches token userId for
-    // security.
+    /**
+     * Get cart by user ID and shop ID
+     * GET /api/cart/user/{userId}/shop/{shopId}
+     *
+     * LEGACY ENDPOINT: Kept for backward compatibility
+     * Note: The userId path variable is ignored and replaced with authenticated user ID for security
+     *
+     * @deprecated Use /user/me instead
+     */
+    @Deprecated
     @GetMapping("/user/{userId}/shop/{shopId}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<CartResponse> getCartByUserAndShop(
@@ -73,23 +100,30 @@ public class CartController extends BaseController {
             @PathVariable UUID userId,
             @PathVariable Long shopId) {
 
+        // SECURITY: Always use authenticated user ID, ignore path variable
         UUID authUserId = extractUserId(authentication);
-        if (!authUserId.equals(userId)) {
-            // For now, allow it? Or forbid?
-            // ShopOwner might want to see user carts?
-            // Let's enforce parity: user can only see their own cart.
-            // Unless we differ based on role.
-            // For safety, I'll force use of authUserId.
-        }
+
+        // Log deprecation warning if you have logging configured
+        // log.warn("Deprecated endpoint /user/{}/shop/{} called. Use /user/me/shop/{} instead",
+        //          userId, shopId, shopId);
 
         CartResponse response = cartService.getCartByUserAndShop(authUserId, shopId);
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * Clear all items from a cart
+     * DELETE /api/cart/{cartId}/clear
+     *
+     * SECURITY FIX: Now validates that the cart belongs to the authenticated user
+     */
     @DeleteMapping("/{cartId}/clear")
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Void> clearCart(@PathVariable UUID cartId) {
-        cartService.clearCart(cartId);
+    public ResponseEntity<Void> clearCart(
+            Authentication authentication,
+            @PathVariable UUID cartId) {
+        UUID userId = extractUserId(authentication);
+        cartService.clearCart(userId, cartId);
         return ResponseEntity.noContent().build();
     }
 }

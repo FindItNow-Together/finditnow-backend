@@ -21,4 +21,7 @@ public class CartResponse {
     private CartStatus status;
     private List<CartItemResponse> items;
     private Integer totalItems;
+
+    // Calculated fields for checkout (NEW FIELD)
+    private Float subtotal;  // Sum of all item subtotals
 }

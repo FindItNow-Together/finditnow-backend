@@ -96,7 +96,7 @@ class CartServiceImplTest {
 
         @Test
         void addItemToCart_InsufficientStock() {
-                AddToCartRequest request = new AddToCartRequest(inventoryId, 9); // Available is 8 (10-2)
+                AddToCartRequest request = new AddToCartRequest(inventoryId, shopId, 9); // Available is 8 (10-2)
 
                 when(cartRepository.findByUserIdAndShopIdAndStatus(userId, shopId, CartStatus.ACTIVE))
                                 .thenReturn(Optional.of(cart));

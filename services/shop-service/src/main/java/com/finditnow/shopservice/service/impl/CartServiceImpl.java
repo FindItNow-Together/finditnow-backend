@@ -65,7 +65,7 @@ public class CartServiceImpl implements CartService {
         ShopInventory inventory = shopInventoryRepository.findById(request.getInventoryId())
                 .orElseThrow(() -> new NotFoundException("Inventory not found with id: " + request.getInventoryId()));
 
-        if (inventory.getShop().getId() != shopId) {
+        if (!inventory.getShop().getId().equals(shopId)) {
             throw new BadRequestException("Inventory does not belong to the specified shop");
         }
 
@@ -98,15 +98,23 @@ public class CartServiceImpl implements CartService {
             cart.getItems().add(newItem);
         }
 
-        Cart savedCart = cartRepository.save(cart);
+        // Use WITH DETAILS query to fetch all relationships for response
+        Cart savedCart = cartRepository.findByIdWithDetails(cart.getId())
+                .orElseThrow(() -> new CartNotFoundException("Cart not found after save"));
+
         return cartMapper.toCartResponse(savedCart);
     }
 
     @Override
-    public CartResponse updateCartItem(UUID cartItemId, UpdateCartItemRequest request) {
+    public CartResponse updateCartItem(UUID userId, UUID cartItemId, UpdateCartItemRequest request) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new CartItemNotFoundException(
                         "Cart item not found with id: " + cartItemId));
+
+        // SECURITY CHECK: Verify the cart item belongs to the authenticated user
+        if (!cartItem.getCart().getUserId().equals(userId)) {
+            throw new RuntimeException("You don't have permission to modify this cart item");
+        }
 
         ShopInventory inventory = cartItem.getShopInventory();
         int oldQuantity = cartItem.getQuantity();
@@ -122,22 +130,29 @@ public class CartServiceImpl implements CartService {
         cartItem.setQuantity(newQuantity);
         cartItemRepository.save(cartItem);
 
-        Cart cart = cartItem.getCart();
+        // Use WITH DETAILS query to fetch all relationships for response
+        Cart cart = cartRepository.findByIdWithDetails(cartItem.getCart().getId())
+                .orElseThrow(() -> new CartNotFoundException("Cart not found"));
+
         return cartMapper.toCartResponse(cart);
     }
 
     @Override
-    public void removeCartItem(UUID cartItemId) {
+    public void removeCartItem(UUID userId, UUID cartItemId) {
         CartItem cartItem = cartItemRepository.findById(cartItemId)
                 .orElseThrow(() -> new CartItemNotFoundException(
                         "Cart item not found with id: " + cartItemId));
+
+        // SECURITY CHECK: Verify the cart item belongs to the authenticated user
+        if (!cartItem.getCart().getUserId().equals(userId)) {
+            throw new RuntimeException("You don't have permission to remove this cart item");
+        }
 
         ShopInventory inventory = cartItem.getShopInventory();
 
         // Release reserved stock
         inventory.setReservedStock(inventory.getReservedStock() - cartItem.getQuantity());
-        // Simple safety check to prevent negative reserved stock if manual DB edits
-        // happened
+        // Simple safety check to prevent negative reserved stock if manual DB edits happened
         if (inventory.getReservedStock() < 0) {
             inventory.setReservedStock(0);
         }
@@ -149,8 +164,10 @@ public class CartServiceImpl implements CartService {
     @Override
     @Transactional(readOnly = true)
     public CartResponse getCartByUserAndShop(UUID userId, Long shopId) {
+        // Use WITH DETAILS query to eagerly fetch all relationships
+        // This prevents LazyInitializationException when CartMapper accesses nested entities
         Cart cart = cartRepository
-                .findByUserIdAndShopIdAndStatus(userId, shopId, CartStatus.ACTIVE)
+                .findByUserIdAndShopIdAndStatusWithDetails(userId, shopId, CartStatus.ACTIVE)
                 .orElseThrow(() -> new CartNotFoundException(
                         "Active cart not found for user: " + userId + " and shop: " + shopId));
 
@@ -158,10 +175,29 @@ public class CartServiceImpl implements CartService {
     }
 
     @Override
-    public void clearCart(UUID cartId) {
-        Cart cart = cartRepository.findById(cartId)
+    @Transactional(readOnly = true)
+    public CartResponse getUserCart(UUID userId) {
+        // Use WITH DETAILS query to eagerly fetch all relationships
+        // This prevents LazyInitializationException when CartMapper accesses nested entities
+        Cart cart = cartRepository
+                .findByUserIdAndStatusWithDetails(userId, CartStatus.ACTIVE)
+                .orElseThrow(() -> new CartNotFoundException(
+                        "Active cart not found for user: " + userId));
+
+        return cartMapper.toCartResponse(cart);
+    }
+
+    @Override
+    public void clearCart(UUID userId, UUID cartId) {
+        // Use WITH DETAILS query to fetch relationships
+        Cart cart = cartRepository.findByIdWithDetails(cartId)
                 .orElseThrow(() -> new CartNotFoundException(
                         "Cart not found with id: " + cartId));
+
+        // SECURITY CHECK: Verify the cart belongs to the authenticated user
+        if (!cart.getUserId().equals(userId)) {
+            throw new RuntimeException("You don't have permission to clear this cart");
+        }
 
         // Release reserved stock for all items
         for (CartItem item : cart.getItems()) {
@@ -187,24 +223,21 @@ public class CartServiceImpl implements CartService {
         cart.setStatus(CartStatus.CONVERTED);
         // Note: We do NOT decrease reserved stock here because the order process
         // will likely handle the inventory deduction (converting reserved to sold).
-        // If order service is separate, this logic might need coordination,
-        // but typically "Converted" means it's becoming an order.
 
         cartRepository.save(cart);
     }
 
-    private void validateStockAvailability(ShopInventory inventory, int recipientQuantity, int currentQuantity) {
-        // available = (stock - reserved) + currentQuantityInCart(which is already in
-        // reserved)
-        // effectively: remaining_free = stock - reserved
-        // we need: request_diff <= remaining_free
+    private void validateStockAvailability(ShopInventory inventory, int requestedQuantity, int currentQuantity) {
+        // Calculate how much we're trying to add/change
+        int diff = requestedQuantity - currentQuantity;
 
-        int diff = recipientQuantity - currentQuantity;
         if (diff > 0) {
+            // We're increasing quantity, check if there's enough available stock
             int availableStock = inventory.getStock() - inventory.getReservedStock();
             if (diff > availableStock) {
                 throw new BadRequestException("Insufficient stock. Available: " + availableStock);
             }
         }
+        // If diff <= 0, we're decreasing quantity, no stock check needed
     }
 }
