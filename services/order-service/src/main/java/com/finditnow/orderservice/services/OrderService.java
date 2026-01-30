@@ -95,7 +95,7 @@ public class OrderService {
         Order savedOrder = orderDao.save(order);
 
         // 7. Clear cart (call cart service)
-        clearCart(request.getCartId(), userId);
+        consumeCart(request.getCartId(), userId);
 
         // 8. For COD, mark as confirmed
         if (savedOrder.getPaymentMethod() == Order.PaymentMethod.CASH_ON_DELIVERY) {
@@ -167,10 +167,10 @@ public class OrderService {
 //         return TestCartData.getCartById(cartId);
     }
 
-    private void clearCart(UUID cartId, UUID userId) {
+    private void consumeCart(UUID cartId, UUID userId) {
         //call cart service for clearing the cart
         try {
-            var res = InterServiceClient.call("shop-service", "/cart/" + cartId.toString() + "/clear", "GET", null);
+            InterServiceClient.call("shop-service", "/cart/" + cartId.toString() + "/internal/consume", "DELETE", null);
         } catch (Exception e) {
             log.error("Error while fetching cart for cartId: {}", cartId, e);
             throw new RuntimeException("failed in fetching the cart for cartId: " + cartId);

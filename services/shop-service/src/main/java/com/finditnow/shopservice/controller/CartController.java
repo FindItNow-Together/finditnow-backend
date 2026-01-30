@@ -39,7 +39,7 @@ public class CartController extends BaseController {
     /**
      * Update cart item quantity
      * PUT /api/cart/item/{itemId}
-     *
+     * <p>
      * SECURITY FIX: Now validates that the cart item belongs to the authenticated user
      */
     @PutMapping("/item/{itemId}")
@@ -56,7 +56,7 @@ public class CartController extends BaseController {
     /**
      * Remove an item from the cart
      * DELETE /api/cart/item/{itemId}
-     *
+     * <p>
      * SECURITY FIX: Now validates that the cart item belongs to the authenticated user
      */
     @DeleteMapping("/item/{itemId}")
@@ -72,7 +72,7 @@ public class CartController extends BaseController {
     /**
      * Get current user's cart for a specific shop
      * GET /api/cart/user/me/shop/{shopId}
-     *
+     * <p>
      * RECOMMENDED ENDPOINT: Uses authenticated user from token
      */
     @GetMapping("/user/me")
@@ -87,7 +87,7 @@ public class CartController extends BaseController {
     /**
      * Get cart by user ID and shop ID
      * GET /api/cart/user/{userId}/shop/{shopId}
-     *
+     * <p>
      * LEGACY ENDPOINT: Kept for backward compatibility
      * Note: The userId path variable is ignored and replaced with authenticated user ID for security
      *
@@ -115,7 +115,7 @@ public class CartController extends BaseController {
     /**
      * Clear all items from a cart
      * DELETE /api/cart/{cartId}/clear
-     *
+     * <p>
      * SECURITY FIX: Now validates that the cart belongs to the authenticated user
      */
     @DeleteMapping("/{cartId}/clear")
@@ -126,6 +126,29 @@ public class CartController extends BaseController {
         UUID userId = extractUserId(authentication);
         cartService.clearCart(userId, cartId);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Clear all items from a cart
+     * DELETE /api/cart/{cartId}/clear
+     * <p>
+     * Internal use only
+     */
+    @DeleteMapping("/{cartId}/internal/consume")
+    @PreAuthorize("hasRole('SERVICE')")
+    public ResponseEntity<Void> clearCart(@PathVariable UUID cartId) {
+        cartService.consumeCart(cartId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Get cart for other services
+     * Currently scoped for internal use only
+     */
+    @GetMapping("/{cartId}")
+    @PreAuthorize("hasRole('SERVICE')")
+    public ResponseEntity<CartResponse> getCart(@PathVariable UUID cartId) {
+        return ResponseEntity.ok(cartService.getCartById(cartId));
     }
 
     /**
