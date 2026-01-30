@@ -199,8 +199,22 @@ public class DeliveryService {
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} completed by agent {}", deliveryId, agentId);
 
+        // Free up the agent
+        DeliveryAgent agent = deliveryAgentRepository.findById(agentId)
+                .orElseThrow(() -> new RuntimeException("Agent not found: " + agentId));
+        agent.setStatus(DeliveryAgentStatus.AVAILABLE);
+        agent.setCurrentDeliveryId(null);
+        deliveryAgentRepository.save(agent);
+
         // Sync order status
         orderClient.updateOrderStatus(delivery.getOrderId(), "DELIVERED");
+
+        // Try to assign next delivery to this or other agents
+        try {
+            assignmentService.attemptAssignment();
+        } catch (Exception e) {
+            log.error("Re-assignment failed after delivery completion, continuing", e);
+        }
 
         return mapToResponse(updatedDelivery);
     }
@@ -228,8 +242,22 @@ public class DeliveryService {
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} cancelled by agent {}", deliveryId, agentId);
 
+        // Free up the agent
+        DeliveryAgent agent = deliveryAgentRepository.findById(agentId)
+                .orElseThrow(() -> new RuntimeException("Agent not found: " + agentId));
+        agent.setStatus(DeliveryAgentStatus.AVAILABLE);
+        agent.setCurrentDeliveryId(null);
+        deliveryAgentRepository.save(agent);
+
         // Sync order status
         orderClient.updateOrderStatus(delivery.getOrderId(), "CANCELLED");
+
+        // Try to assign next delivery to this or other agents
+        try {
+            assignmentService.attemptAssignment();
+        } catch (Exception e) {
+            log.error("Re-assignment failed after delivery cancellation, continuing", e);
+        }
 
         return mapToResponse(updatedDelivery);
     }
@@ -253,11 +281,33 @@ public class DeliveryService {
             throw new RuntimeException("Invalid state: Cannot opt out of a completed or cancelled delivery");
         }
 
+        // Track this agent as opted-out for this delivery
+        if (delivery.getOptedOutAgentIds() == null) {
+            delivery.setOptedOutAgentIds(new java.util.HashSet<>());
+        }
+        delivery.getOptedOutAgentIds().add(agentId);
+
         // Remove agent assignment and set status to unassigned
         delivery.setAssignedAgentId(null);
         delivery.setStatus(DeliveryStatus.UNASSIGNED);
         Delivery updatedDelivery = deliveryRepository.save(delivery);
+
+        // Free up the agent
+        DeliveryAgent agent = deliveryAgentRepository.findById(agentId)
+                .orElseThrow(() -> new RuntimeException("Agent not found: " + agentId));
+        agent.setStatus(DeliveryAgentStatus.AVAILABLE);
+        agent.setCurrentDeliveryId(null);
+        deliveryAgentRepository.save(agent);
+
         log.info("Agent {} opted out of delivery {}", agentId, deliveryId);
+
+        // Try to assign this delivery or others to available agents
+        try {
+            assignmentService.attemptAssignment();
+        } catch (Exception e) {
+            log.error("Re-assignment failed after agent opt-out, continuing", e);
+        }
+
         return mapToResponse(updatedDelivery);
     }
 
