@@ -46,10 +46,11 @@ public class DeliveryController {
 
     /**
      * Get deliveries assigned to a specific agent with pagination and filtering
+     * 
      * @param userIdStr agent id
-     * @param status optional status filter
-     * @param page page number (0-indexed)
-     * @param limit page size
+     * @param status    optional status filter
+     * @param page      page number (0-indexed)
+     * @param limit     page size
      * @return paginated list of deliveries
      */
     @GetMapping("/mine")
@@ -64,5 +65,32 @@ public class DeliveryController {
         PagedDeliveryResponse response = deliveryService.getDeliveriesByAgentId(
                 agentId, status, page, limit);
         return ResponseEntity.ok(response);
+    }
+
+    @PutMapping("/{id}/complete")
+    @PreAuthorize("hasRole('DELIVERY_AGENT')")
+    public ResponseEntity<DeliveryResponse> completeDelivery(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userIdStr) {
+        UUID agentId = UUID.fromString(userIdStr);
+        return ResponseEntity.ok(deliveryService.completeDelivery(id, agentId));
+    }
+
+    @PutMapping("/{id}/cancel")
+    @PreAuthorize("hasRole('DELIVERY_AGENT')")
+    public ResponseEntity<DeliveryResponse> cancelDelivery(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userIdStr) {
+        UUID agentId = UUID.fromString(userIdStr);
+        return ResponseEntity.ok(deliveryService.cancelDeliveryByAgent(id, agentId));
+    }
+
+    @PutMapping("/{id}/opt-out")
+    @PreAuthorize("hasRole('DELIVERY_AGENT')")
+    public ResponseEntity<DeliveryResponse> optOutDelivery(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userIdStr) {
+        UUID agentId = UUID.fromString(userIdStr);
+        return ResponseEntity.ok(deliveryService.optOutDelivery(id, agentId));
     }
 }

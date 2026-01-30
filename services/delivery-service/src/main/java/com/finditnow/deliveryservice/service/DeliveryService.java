@@ -42,8 +42,7 @@ public class DeliveryService {
 
         double distance = calculateDistanceIds(
                 request.getShopLatitude(), request.getShopLongitude(),
-                request.getUserLatitude(), request.getUserLongitude()
-        );
+                request.getUserLatitude(), request.getUserLongitude());
 
         double amount;
         if (distance < 5) {
@@ -96,8 +95,7 @@ public class DeliveryService {
             } catch (Exception e) {
                 log.error(
                         "Delivery assignment failed for delivery {}, continuing",
-                        savedDelivery.getId(), e
-                );
+                        savedDelivery.getId(), e);
             }
         }
 
@@ -109,9 +107,7 @@ public class DeliveryService {
      */
     public DeliveryResponse getDeliveryByOrderId(UUID orderId) {
         Delivery delivery = deliveryRepository.findByOrderId(orderId)
-                .orElseThrow(() ->
-                        new RuntimeException("Delivery not found for order: " + orderId)
-                );
+                .orElseThrow(() -> new RuntimeException("Delivery not found for order: " + orderId));
         return mapToResponse(delivery);
     }
 
@@ -120,9 +116,7 @@ public class DeliveryService {
      */
     public DeliveryResponse getDeliveryById(UUID deliveryId) {
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() ->
-                        new RuntimeException("Delivery not found: " + deliveryId)
-                );
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
         return mapToResponse(delivery);
     }
 
@@ -168,12 +162,86 @@ public class DeliveryService {
             } catch (Exception e) {
                 log.error(
                         "Re-assignment failed after delivery {} completion, continuing",
-                        deliveryId, e
-                );
+                        deliveryId, e);
             }
         }
 
         return mapToResponse(delivery);
+    }
+
+    /**
+     * Completes a delivery assigned to an agent
+     */
+    public DeliveryResponse completeDelivery(UUID deliveryId, UUID agentId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+
+        // Validate agent is assigned to this delivery
+        if (delivery.getAssignedAgentId() == null || !delivery.getAssignedAgentId().equals(agentId)) {
+            throw new RuntimeException("Unauthorized: You are not assigned to this delivery");
+        }
+
+        // Validate delivery is in valid state for completion
+        if (!DeliveryStatus.PICKED_UP.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Delivery must be picked up before completion");
+        }
+
+        delivery.setStatus(DeliveryStatus.DELIVERED);
+        Delivery updatedDelivery = deliveryRepository.save(delivery);
+        log.info("Delivery {} completed by agent {}", deliveryId, agentId);
+        return mapToResponse(updatedDelivery);
+    }
+
+    /**
+     * Cancels a delivery by the assigned agent
+     */
+    public DeliveryResponse cancelDeliveryByAgent(UUID deliveryId, UUID agentId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+
+        // Validate agent is assigned to this delivery
+        if (delivery.getAssignedAgentId() == null || !delivery.getAssignedAgentId().equals(agentId)) {
+            throw new RuntimeException("Unauthorized: You are not assigned to this delivery");
+        }
+
+        // Validate delivery is not already completed or delivered
+        if (DeliveryStatus.DELIVERED.equals(delivery.getStatus()) ||
+                DeliveryStatus.CANCELLED.equals(delivery.getStatus()) ||
+                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Cannot cancel a completed or already cancelled delivery");
+        }
+
+        delivery.setStatus(DeliveryStatus.CANCELLED_BY_AGENT);
+        Delivery updatedDelivery = deliveryRepository.save(delivery);
+        log.info("Delivery {} cancelled by agent {}", deliveryId, agentId);
+        return mapToResponse(updatedDelivery);
+    }
+
+    /**
+     * Allows an agent to opt out of a delivery
+     */
+    public DeliveryResponse optOutDelivery(UUID deliveryId, UUID agentId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+
+        // Validate agent is assigned to this delivery
+        if (delivery.getAssignedAgentId() == null || !delivery.getAssignedAgentId().equals(agentId)) {
+            throw new RuntimeException("Unauthorized: You are not assigned to this delivery");
+        }
+
+        // Validate delivery is not completed, delivered, or cancelled
+        if (DeliveryStatus.DELIVERED.equals(delivery.getStatus()) ||
+                DeliveryStatus.CANCELLED.equals(delivery.getStatus()) ||
+                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Cannot opt out of a completed or cancelled delivery");
+        }
+
+        // Remove agent assignment and set status to unassigned
+        delivery.setAssignedAgentId(null);
+        delivery.setStatus(DeliveryStatus.UNASSIGNED);
+        Delivery updatedDelivery = deliveryRepository.save(delivery);
+        log.info("Agent {} opted out of delivery {}", agentId, deliveryId);
+        return mapToResponse(updatedDelivery);
     }
 
     /**
@@ -184,11 +252,12 @@ public class DeliveryService {
     public PagedDeliveryResponse getDeliveriesByAgentId(
             UUID agentId, DeliveryStatus status, int page, int limit) {
 
-        if (page < 0) page = 0;
-        if (limit <= 0 || limit > 100) limit = 10;
+        if (page < 0)
+            page = 0;
+        if (limit <= 0 || limit > 100)
+            limit = 10;
 
-        Pageable pageable =
-                PageRequest.of(page, limit, Sort.by("createdAt").descending());
+        Pageable pageable = PageRequest.of(page, limit, Sort.by("createdAt").descending());
 
         Page<Delivery> deliveryPage;
 
@@ -199,8 +268,7 @@ public class DeliveryService {
             deliveryPage = deliveryRepository.findByAssignedAgentIdAndStatusNotIn(
                     agentId,
                     List.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED),
-                    pageable
-            );
+                    pageable);
         }
 
         List<DeliveryResponse> deliveries = deliveryPage.getContent()
@@ -230,8 +298,8 @@ public class DeliveryService {
 
         double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
                 + Math.cos(Math.toRadians(lat1))
-                * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        * Math.cos(Math.toRadians(lat2))
+                        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c;

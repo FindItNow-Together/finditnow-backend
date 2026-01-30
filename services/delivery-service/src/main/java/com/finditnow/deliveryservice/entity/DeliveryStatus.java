@@ -1,12 +1,13 @@
 package com.finditnow.deliveryservice.entity;
 
 public enum DeliveryStatus {
-    CREATED,     // delivery record exists
-    ASSIGNED,    // agent assigned
+    CREATED, // delivery record exists
+    ASSIGNED, // agent assigned
     PICKED_UP,
     IN_TRANSIT,
     DELIVERED,
     CANCELLED,
-    FAILED
+    FAILED,
+    CANCELLED_BY_AGENT,
+    UNASSIGNED
 }
-
