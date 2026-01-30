@@ -100,7 +100,7 @@ public class OrderService {
         // 8. For COD, mark as confirmed
         if (savedOrder.getPaymentMethod() == Order.PaymentMethod.CASH_ON_DELIVERY) {
             savedOrder.setStatus(Order.OrderStatus.CONFIRMED);
-            savedOrder = orderDao.save(savedOrder);
+//            savedOrder = orderDao.save(savedOrder);
 
             // Initiate Delivery for COD
             initiateDelivery(savedOrder);

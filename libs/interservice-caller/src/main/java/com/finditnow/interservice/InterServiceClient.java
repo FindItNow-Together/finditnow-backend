@@ -1,6 +1,5 @@
 package com.finditnow.interservice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.finditnow.config.Config;
 
 import java.net.URI;
@@ -13,7 +12,6 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class InterServiceClient {
-    private static final ObjectMapper mapper = new ObjectMapper();
     private static String thisService;
     private static String serviceSecret;
     private static final String authServiceUrl = resolveServiceUrl("auth-service");
@@ -86,7 +84,7 @@ public final class InterServiceClient {
         Map<String, Object> json;
 
         try {
-            json = mapper.readValue(response.body(), Map.class);
+            json = JsonUtil.fromJson(response.body(), Map.class);
         } catch (Exception e) {
             throw new IllegalArgumentException("Invalid JSON payload", e);
         }
@@ -122,7 +120,7 @@ public final class InterServiceClient {
             throw new IllegalStateException("Missing env var: " + envKey);
         }
 
-        return host + port;
+        return host + ":" + port;
     }
 
     // ---------- CACHE ----------

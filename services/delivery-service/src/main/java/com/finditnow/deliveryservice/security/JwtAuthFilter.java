@@ -41,12 +41,19 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
             return;
         }
 
+
+
         if (redis.isAccessTokenBlacklisted(token)) {
             sendUnauthorized(response, "token_revoked");
             return;
         }
 
         try {
+            if(jwt.isServiceToken(token)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             Map<String, String> userInfo = jwt.parseTokenToUser(token);
             String userId = userInfo.get("userId");
             String profile = userInfo.get("profile");

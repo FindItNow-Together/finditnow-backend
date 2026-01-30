@@ -11,7 +11,17 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "deliveries")
+@Table(
+        name = "deliveries",
+        indexes = {
+                @Index(name = "idx_delivery_order", columnList = "orderId"),
+                @Index(name = "idx_delivery_agent", columnList = "assignedAgentId"),
+                @Index(name = "idx_delivery_status", columnList = "status")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "orderId")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,15 +31,16 @@ public class Delivery {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private UUID orderId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private Long shopId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private UUID customerId;
 
+    @Column
     private UUID assignedAgentId;
 
     @Enumerated(EnumType.STRING)
@@ -40,14 +51,16 @@ public class Delivery {
     @Column(nullable = false)
     private DeliveryType type;
 
-    @Column(columnDefinition = "TEXT")
-    private String pickupAddress; // JSON or formatted string
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String pickupAddress;
+
+    @Column(columnDefinition = "TEXT", nullable = false)
+    private String deliveryAddress;
 
     @Column(columnDefinition = "TEXT")
-    private String deliveryAddress; // JSON or formatted string
-
     private String instructions;
 
+    @Column
     private Double deliveryCharge;
 
     @CreationTimestamp

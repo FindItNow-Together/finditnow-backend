@@ -79,7 +79,7 @@ public class DeliveryServiceTest {
         DeliveryResponse delivery = deliveryService.initiateDelivery(initiateRequest);
 
         assertNotNull(delivery.getId());
-        assertEquals(DeliveryStatus.PENDING, delivery.getStatus());
+        assertEquals(DeliveryStatus.CREATED, delivery.getStatus());
         assertEquals(DeliveryType.PARTNER, delivery.getType());
         assertEquals(initiateRequest.getOrderId(), delivery.getOrderId());
 

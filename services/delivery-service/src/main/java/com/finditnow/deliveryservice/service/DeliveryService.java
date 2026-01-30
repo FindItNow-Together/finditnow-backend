@@ -1,10 +1,10 @@
 package com.finditnow.deliveryservice.service;
 
 import com.finditnow.deliveryservice.dto.*;
-import com.finditnow.deliveryservice.entity.Delivery;
-import com.finditnow.deliveryservice.entity.DeliveryStatus;
-import com.finditnow.deliveryservice.entity.DeliveryType;
+import com.finditnow.deliveryservice.entity.*;
+import com.finditnow.deliveryservice.repository.DeliveryAgentRepository;
 import com.finditnow.deliveryservice.repository.DeliveryRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -23,10 +23,18 @@ import java.util.stream.Collectors;
 public class DeliveryService {
 
     private final DeliveryRepository deliveryRepository;
+    private final DeliveryAgentRepository deliveryAgentRepository;
+    private final AssignmentService assignmentService;
 
     private static final double EARTH_RADIUS = 6371; // km
 
+    /**
+     * Calculates delivery charge and distance based on shop and user coordinates.
+     *
+     * This method is pure computation and does not touch persistence.
+     */
     public DeliveryQuoteResponse calculateQuote(DeliveryQuoteRequest request) {
+
         if (request.getShopLatitude() == null || request.getShopLongitude() == null ||
                 request.getUserLatitude() == null || request.getUserLongitude() == null) {
             return new DeliveryQuoteResponse(0.0, 0.0);
@@ -34,7 +42,8 @@ public class DeliveryService {
 
         double distance = calculateDistanceIds(
                 request.getShopLatitude(), request.getShopLongitude(),
-                request.getUserLatitude(), request.getUserLongitude());
+                request.getUserLatitude(), request.getUserLongitude()
+        );
 
         double amount;
         if (distance < 5) {
@@ -51,7 +60,18 @@ public class DeliveryService {
         return new DeliveryQuoteResponse(amount, distance);
     }
 
+    /**
+     * Initiates a delivery for an order.
+     *
+     * - Persists the delivery in CREATED state
+     * - TAKEAWAY deliveries are immediately marked DELIVERED
+     * - Attempts best-effort assignment for non-takeaway deliveries
+     *
+     * Assignment failure MUST NOT roll back delivery creation.
+     */
+    @Transactional
     public DeliveryResponse initiateDelivery(InitiateDeliveryRequest request) {
+
         Delivery delivery = new Delivery();
         delivery.setOrderId(request.getOrderId());
         delivery.setShopId(request.getShopId());
@@ -61,66 +81,135 @@ public class DeliveryService {
         delivery.setDeliveryAddress(request.getDeliveryAddress());
         delivery.setInstructions(request.getInstructions());
         delivery.setDeliveryCharge(request.getAmount());
-        delivery.setStatus(DeliveryStatus.PENDING);
+
+        delivery.setStatus(DeliveryStatus.CREATED);
 
         if (DeliveryType.TAKEAWAY.equals(request.getType())) {
             delivery.setStatus(DeliveryStatus.DELIVERED);
         }
 
         Delivery savedDelivery = deliveryRepository.save(delivery);
+
+        if (savedDelivery.getStatus() == DeliveryStatus.CREATED) {
+            try {
+                assignmentService.attemptAssignment();
+            } catch (Exception e) {
+                log.error(
+                        "Delivery assignment failed for delivery {}, continuing",
+                        savedDelivery.getId(), e
+                );
+            }
+        }
+
         return mapToResponse(savedDelivery);
     }
 
+    /**
+     * Fetches delivery by order ID.
+     */
     public DeliveryResponse getDeliveryByOrderId(UUID orderId) {
         Delivery delivery = deliveryRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found for order: " + orderId));
+                .orElseThrow(() ->
+                        new RuntimeException("Delivery not found for order: " + orderId)
+                );
         return mapToResponse(delivery);
     }
 
+    /**
+     * Fetches delivery by delivery ID.
+     */
     public DeliveryResponse getDeliveryById(UUID deliveryId) {
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+                .orElseThrow(() ->
+                        new RuntimeException("Delivery not found: " + deliveryId)
+                );
         return mapToResponse(delivery);
     }
 
-    public DeliveryResponse updateStatus(UUID deliveryId, DeliveryStatus status) {
+    /**
+     * Updates delivery status.
+     *
+     * If a delivery reaches a terminal state:
+     * - DELIVERED
+     * - FAILED
+     * - CANCELLED
+     *
+     * Then:
+     * - Agent capacity is freed
+     * - Best-effort reassignment is attempted
+     *
+     * Assignment failure MUST NOT roll back the status update.
+     */
+    @Transactional
+    public DeliveryResponse updateStatus(UUID deliveryId, DeliveryStatus newStatus) {
+
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
-        delivery.setStatus(status);
-        Delivery updatedDelivery = deliveryRepository.save(delivery);
-        return mapToResponse(updatedDelivery);
+                .orElseThrow(() -> new RuntimeException("Delivery not found"));
+
+        delivery.setStatus(newStatus);
+        deliveryRepository.save(delivery);
+
+        if (newStatus == DeliveryStatus.DELIVERED
+                || newStatus == DeliveryStatus.FAILED
+                || newStatus == DeliveryStatus.CANCELLED) {
+
+            if (delivery.getAssignedAgentId() != null) {
+                DeliveryAgent agent = deliveryAgentRepository
+                        .findById(delivery.getAssignedAgentId())
+                        .orElseThrow();
+
+                agent.setStatus(DeliveryAgentStatus.AVAILABLE);
+                agent.setCurrentDeliveryId(null);
+                deliveryAgentRepository.save(agent);
+            }
+
+            try {
+                assignmentService.attemptAssignment();
+            } catch (Exception e) {
+                log.error(
+                        "Re-assignment failed after delivery {} completion, continuing",
+                        deliveryId, e
+                );
+            }
+        }
+
+        return mapToResponse(delivery);
     }
 
+    /**
+     * Returns paginated deliveries for a given agent.
+     *
+     * If status is null, only active deliveries are returned.
+     */
     public PagedDeliveryResponse getDeliveriesByAgentId(
             UUID agentId, DeliveryStatus status, int page, int limit) {
 
-        // Validate pagination parameters
         if (page < 0) page = 0;
         if (limit <= 0 || limit > 100) limit = 10;
 
-        Pageable pageable = PageRequest.of(page, limit, Sort.by("createdAt").descending());
+        Pageable pageable =
+                PageRequest.of(page, limit, Sort.by("createdAt").descending());
 
         Page<Delivery> deliveryPage;
 
         if (status != null) {
-            // Filter by specific status
             deliveryPage = deliveryRepository.findByAssignedAgentIdAndStatus(
                     agentId, status, pageable);
         } else {
-            // Get all active deliveries (exclude DELIVERED and CANCELLED)
             deliveryPage = deliveryRepository.findByAssignedAgentIdAndStatusNotIn(
                     agentId,
                     List.of(DeliveryStatus.DELIVERED, DeliveryStatus.CANCELLED),
-                    pageable);
+                    pageable
+            );
         }
 
-        List<DeliveryResponse> deliveryResponses = deliveryPage.getContent()
+        List<DeliveryResponse> deliveries = deliveryPage.getContent()
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
 
         return PagedDeliveryResponse.builder()
-                .deliveries(deliveryResponses)
+                .deliveries(deliveries)
                 .currentPage(deliveryPage.getNumber())
                 .totalPages(deliveryPage.getTotalPages())
                 .totalElements(deliveryPage.getTotalElements())
@@ -130,17 +219,29 @@ public class DeliveryService {
                 .build();
     }
 
-    private double calculateDistanceIds(double lat1, double lon1, double lat2, double lon2) {
+    /**
+     * Calculates Haversine distance between two latitude/longitude points.
+     */
+    private double calculateDistanceIds(
+            double lat1, double lon1, double lat2, double lon2) {
+
         double dLat = Math.toRadians(lat2 - lat1);
         double dLon = Math.toRadians(lon2 - lon1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1))
+                * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c;
     }
 
+    /**
+     * Maps Delivery entity to API response.
+     */
     private DeliveryResponse mapToResponse(Delivery delivery) {
+
         return DeliveryResponse.builder()
                 .id(delivery.getId())
                 .orderId(delivery.getOrderId())
