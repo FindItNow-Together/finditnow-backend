@@ -1,11 +1,11 @@
 package com.finditnow.orderservice.services;
 
-import com.finditnow.orderservice.TestCartData;
+import com.finditnow.interservice.InterServiceClient;
+import com.finditnow.interservice.JsonUtil;
 import com.finditnow.orderservice.clients.DeliveryClient;
 import com.finditnow.orderservice.daos.OrderDao;
 import com.finditnow.orderservice.daos.PaymentDao;
 import com.finditnow.orderservice.dtos.*;
-
 import com.finditnow.orderservice.entities.Order;
 import com.finditnow.orderservice.entities.OrderItem;
 import jakarta.transaction.Transactional;
@@ -154,31 +154,27 @@ public class OrderService {
 
     private CartDTO fetchCart(UUID cartId, UUID userId) {
 
-        return TestCartData.getCartById(cartId);
-        // try {
-        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
-        // // Add authentication headers as needed
-        // RestTemplate restTemplate = new RestTemplate();
-        //
-        // return restTemplate.getForObject(url, CartDTO.class);
-        // } catch (Exception e) {
-        // log.error("Failed to fetch cart: {}", cartId, e);
-        // throw new RuntimeException("Failed to fetch cart");
-        // }
+        //call cart service for fetching the cart details
+        try {
+            var res = InterServiceClient.call("shop-service", "/cart/" + cartId.toString(), "GET", null);
+
+            return JsonUtil.fromJson(res.body(), CartDTO.class);
+        } catch (Exception e) {
+            log.error("Error while fetching cart for cartId: {}", cartId, e);
+            throw new RuntimeException("failed in fetching the cart for cartId: " + cartId);
+        }
+
+//         return TestCartData.getCartById(cartId);
     }
 
     private void clearCart(UUID cartId, UUID userId) {
-        // try {
-        // String url = CART_SERVICE_URL + "/api/cart/" + cartId;
-        //
-        // RestTemplate restTemplate = new RestTemplate();
-        //
-        // restTemplate.delete(url);
-        // log.info("Cart {} cleared after order creation", cartId);
-        // } catch (Exception e) {
-        // log.warn("Failed to clear cart: {}", cartId, e);
-        // // Don't fail order creation if cart clear fails
-        // }
+        //call cart service for clearing the cart
+        try {
+            var res = InterServiceClient.call("shop-service", "/cart/" + cartId.toString() + "/clear", "GET", null);
+        } catch (Exception e) {
+            log.error("Error while fetching cart for cartId: {}", cartId, e);
+            throw new RuntimeException("failed in fetching the cart for cartId: " + cartId);
+        }
     }
 
     private OrderResponse mapToOrderResponse(Order order) {
