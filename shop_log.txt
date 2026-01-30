@@ -1,20 +1,19 @@
-To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
-Daemon will be stopped at the end of the build 
+Starting a Gradle Daemon, 2 busy and 2 stopped Daemons could not be reused, use --status for details
 Reusing configuration cache.
-> Task :libs:database:processResources NO-SOURCE
 > Task :libs:redis:processResources NO-SOURCE
 > Task :libs:jwt:processResources NO-SOURCE
+> Task :libs:database:processResources NO-SOURCE
 > Task :libs:config:processResources NO-SOURCE
 > Task :services:shop-service:processResources UP-TO-DATE
 > Task :libs:config:compileJava UP-TO-DATE
 > Task :libs:config:classes UP-TO-DATE
+> Task :libs:config:jar UP-TO-DATE
+> Task :libs:database:compileJava UP-TO-DATE
+> Task :libs:database:classes UP-TO-DATE
 > Task :libs:redis:compileJava UP-TO-DATE
 > Task :libs:redis:classes UP-TO-DATE
-> Task :libs:redis:jar UP-TO-DATE
-> Task :libs:database:compileJava UP-TO-DATE
-> Task :libs:config:jar UP-TO-DATE
-> Task :libs:database:classes UP-TO-DATE
 > Task :libs:database:jar UP-TO-DATE
+> Task :libs:redis:jar UP-TO-DATE
 > Task :libs:jwt:compileJava UP-TO-DATE
 > Task :libs:jwt:classes UP-TO-DATE
 > Task :libs:jwt:jar UP-TO-DATE
@@ -33,24 +32,24 @@ Reusing configuration cache.
 
  :: Spring Boot ::                (v3.5.7)
 
-2026-01-26T00:11:38.799+05:30  INFO 31762 --- [           main] c.finditnow.shopservice.ShopApplication  : Starting ShopApplication using Java 21.0.8 with PID 31762 (/Users/swarupbhosale/Desktop/Delivery/finditnow-backend/services/shop-service/build/classes/java/main started by swarupbhosale in /Users/swarupbhosale/Desktop/Delivery/finditnow-backend/services/shop-service)
-2026-01-26T00:11:38.801+05:30  INFO 31762 --- [           main] c.finditnow.shopservice.ShopApplication  : No active profile set, falling back to 1 default profile: "default"
-2026-01-26T00:11:39.347+05:30  INFO 31762 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-01-26T00:11:39.395+05:30  INFO 31762 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 42 ms. Found 4 JPA repository interfaces.
-2026-01-26T00:11:39.810+05:30  INFO 31762 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8083 (http)
-2026-01-26T00:11:39.821+05:30  INFO 31762 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-01-26T00:11:39.821+05:30  INFO 31762 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
-2026-01-26T00:11:39.854+05:30  INFO 31762 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-01-26T00:11:39.854+05:30  INFO 31762 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1024 ms
-2026-01-26T00:11:39.987+05:30  INFO 31762 --- [           main] com.finditnow.redis.RedisStore           : Redis connection successful
-2026-01-26T00:11:40.087+05:30  INFO 31762 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-01-26T00:11:40.188+05:30  INFO 31762 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@52ba685a
-2026-01-26T00:11:40.190+05:30  INFO 31762 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-01-26T00:11:40.285+05:30  INFO 31762 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-01-26T00:11:40.326+05:30  INFO 31762 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
-2026-01-26T00:11:40.355+05:30  INFO 31762 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-01-26T00:11:40.663+05:30  INFO 31762 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-01-26T00:11:40.790+05:30  INFO 31762 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+2026-01-30T21:53:34.718+05:30  INFO 13457 --- [           main] c.finditnow.shopservice.ShopApplication  : Starting ShopApplication using Java 21.0.8 with PID 13457 (/Users/swarupbhosale/Desktop/Project Modules/Shop Owner Dashboard Improvement/backend/services/shop-service/build/classes/java/main started by swarupbhosale in /Users/swarupbhosale/Desktop/Project Modules/Shop Owner Dashboard Improvement/backend/services/shop-service)
+2026-01-30T21:53:34.723+05:30  INFO 13457 --- [           main] c.finditnow.shopservice.ShopApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-01-30T21:53:35.195+05:30  INFO 13457 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-30T21:53:35.236+05:30  INFO 13457 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 36 ms. Found 4 JPA repository interfaces.
+2026-01-30T21:53:35.563+05:30  INFO 13457 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8083 (http)
+2026-01-30T21:53:35.576+05:30  INFO 13457 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-30T21:53:35.576+05:30  INFO 13457 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-01-30T21:53:35.620+05:30  INFO 13457 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-30T21:53:35.620+05:30  INFO 13457 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 865 ms
+2026-01-30T21:53:35.751+05:30  INFO 13457 --- [           main] com.finditnow.redis.RedisStore           : Redis connection successful
+2026-01-30T21:53:35.833+05:30  INFO 13457 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-30T21:53:36.027+05:30  INFO 13457 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@251a90ce
+2026-01-30T21:53:36.028+05:30  INFO 13457 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-30T21:53:36.074+05:30  INFO 13457 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-30T21:53:36.106+05:30  INFO 13457 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-01-30T21:53:36.171+05:30  INFO 13457 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-30T21:53:36.346+05:30  INFO 13457 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-30T21:53:36.427+05:30  INFO 13457 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
 	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
 	Database driver: undefined/unknown
 	Database version: 15.15
@@ -58,16 +57,122 @@ Reusing configuration cache.
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-01-26T00:11:41.841+05:30  INFO 31762 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-01-26T00:11:42.043+05:30  INFO 31762 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-01-26T00:11:42.431+05:30  INFO 31762 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
-2026-01-26T00:11:44.494+05:30  WARN 31762 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-01-26T00:11:44.905+05:30  WARN 31762 --- [           main] .s.s.UserDetailsServiceAutoConfiguration : 
+2026-01-30T21:53:37.187+05:30  INFO 13457 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    set client_min_messages = WARNING
+Hibernate: 
+    alter table if exists product 
+       drop constraint if exists FKowomku74u72o6h8q0khj7id8q
+Hibernate: 
+    alter table if exists product 
+       drop constraint if exists FKg95vygcoa5dmbic4ko5udkxs6
+Hibernate: 
+    alter table if exists shop 
+       drop constraint if exists FK20ukmcyxws6byxxj29m7ejnqe
+Hibernate: 
+    alter table if exists shop_inventories 
+       drop constraint if exists FKn2gsh3pka4ksji9yedg6v3j3w
+Hibernate: 
+    alter table if exists shop_inventories 
+       drop constraint if exists FK3wsgoblndxq9y415hjfiyna1j
+Hibernate: 
+    drop table if exists categories cascade
+Hibernate: 
+    drop table if exists product cascade
+Hibernate: 
+    drop table if exists shop cascade
+Hibernate: 
+    drop table if exists shop_inventories cascade
+Hibernate: 
+    create table categories (
+        active boolean not null,
+        created_at timestamp(6) with time zone not null,
+        id bigint generated by default as identity,
+        description varchar(255),
+        image_url varchar(255),
+        name varchar(255) not null,
+        type varchar(255) not null check (type in ('PRODUCT','SHOP','BOTH')),
+        primary key (id),
+        unique (name, type)
+    )
+Hibernate: 
+    create table product (
+        category_id bigint not null,
+        id bigint generated by default as identity,
+        shop_inventory_id bigint unique,
+        description TEXT,
+        image_url varchar(255),
+        name varchar(255) not null,
+        primary key (id)
+    )
+Hibernate: 
+    create table shop (
+        latitude float(53) not null,
+        longitude float(53) not null,
+        category_id bigint,
+        id bigint generated by default as identity,
+        owner_id uuid not null,
+        address varchar(255) not null,
+        delivery_option varchar(255) not null,
+        name varchar(255) not null,
+        open_hours varchar(255) not null,
+        phone varchar(255) not null,
+        primary key (id)
+    )
+Hibernate: 
+    create table shop_inventories (
+        price float4 not null check (price>=0),
+        reserved_stock integer not null check (reserved_stock>=0),
+        stock integer not null check (stock>=0),
+        id bigint not null,
+        product_id bigint unique,
+        shop_id bigint not null,
+        primary key (id)
+    )
+Hibernate: 
+    alter table if exists product 
+       add constraint FKowomku74u72o6h8q0khj7id8q 
+       foreign key (category_id) 
+       references categories
+Hibernate: 
+    alter table if exists product 
+       add constraint FKg95vygcoa5dmbic4ko5udkxs6 
+       foreign key (shop_inventory_id) 
+       references shop_inventories
+Hibernate: 
+    alter table if exists shop 
+       add constraint FK20ukmcyxws6byxxj29m7ejnqe 
+       foreign key (category_id) 
+       references categories
+Hibernate: 
+    alter table if exists shop_inventories 
+       add constraint FKn2gsh3pka4ksji9yedg6v3j3w 
+       foreign key (product_id) 
+       references product
+Hibernate: 
+    alter table if exists shop_inventories 
+       add constraint FK3wsgoblndxq9y415hjfiyna1j 
+       foreign key (shop_id) 
+       references shop
+2026-01-30T21:53:37.475+05:30  INFO 13457 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-30T21:53:37.723+05:30  INFO 13457 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-30T21:53:38.445+05:30  WARN 13457 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-30T21:53:38.615+05:30  WARN 13457 --- [           main] .s.s.UserDetailsServiceAutoConfiguration : 
 
-Using generated security password: fc93f52f-c631-4129-b77d-fcf1a94fd24f
+Using generated security password: 0e80dbbe-57f4-46a5-b598-1dc5554c71b6
 
 This generated password is for development use only. Your security configuration must be updated before running your application in production.
 
-2026-01-26T00:11:44.914+05:30  INFO 31762 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
-2026-01-26T00:11:46.442+05:30  INFO 31762 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8083 (http) with context path '/'
-2026-01-26T00:11:46.464+05:30  INFO 31762 --- [           main] c.finditnow.shopservice.ShopApplication  : Started ShopApplication in 7.994 seconds (process running for 8.3)
+2026-01-30T21:53:38.619+05:30  INFO 13457 --- [           main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with UserDetailsService bean with name inMemoryUserDetailsManager
+2026-01-30T21:53:38.850+05:30  INFO 13457 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8083 (http) with context path '/'
+2026-01-30T21:53:38.856+05:30  INFO 13457 --- [           main] c.finditnow.shopservice.ShopApplication  : Started ShopApplication in 4.479 seconds (process running for 4.968)
+2026-01-30T21:56:03.932+05:30  INFO 13457 --- [nio-8083-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-30T21:56:03.939+05:30  INFO 13457 --- [nio-8083-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-30T21:56:04.020+05:30  INFO 13457 --- [nio-8083-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 78 ms
+2026-01-30T21:56:04.501+05:30  WARN 13457 --- [nio-8083-exec-2] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.method.annotation.MethodArgumentTypeMismatchException: Method parameter 'id': Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: "favicon.ico"]
+2026-01-30T22:04:40.293+05:30  WARN 13457 --- [nio-8083-exec-5] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]
+2026-01-30T22:04:40.303+05:30  WARN 13457 --- [nio-8083-exec-4] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]
+2026-01-30T22:04:40.448+05:30  WARN 13457 --- [nio-8083-exec-6] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]
+2026-01-30T22:06:17.181+05:30  WARN 13457 --- [nio-8083-exec-7] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]
+2026-01-30T22:06:17.181+05:30  WARN 13457 --- [nio-8083-exec-8] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]
+2026-01-30T22:06:17.304+05:30  WARN 13457 --- [nio-8083-exec-9] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.web.bind.MissingServletRequestParameterException: Required request parameter 'q' for method parameter type String is not present]

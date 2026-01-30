@@ -1,29 +1,31 @@
-To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
-Daemon will be stopped at the end of the build 
 Reusing configuration cache.
 > Task :libs:proto:protobufDummy UP-TO-DATE
 > Task :libs:jwt:processResources NO-SOURCE
+> Task :libs:config:processResources NO-SOURCE
 > Task :libs:database:processResources NO-SOURCE
 > Task :libs:redis:processResources NO-SOURCE
-> Task :libs:config:processResources NO-SOURCE
+> Task :libs:interservice-caller:processResources NO-SOURCE
+> Task :libs:config:compileJava UP-TO-DATE
 > Task :libs:proto:extractProto UP-TO-DATE
+> Task :libs:config:classes UP-TO-DATE
 > Task :services:user-service:processResources UP-TO-DATE
 > Task :libs:proto:processResources UP-TO-DATE
-> Task :libs:proto:extractIncludeProto UP-TO-DATE
-> Task :libs:config:compileJava UP-TO-DATE
-> Task :libs:config:classes UP-TO-DATE
-> Task :libs:config:jar UP-TO-DATE
-> Task :libs:redis:compileJava UP-TO-DATE
 > Task :libs:database:compileJava UP-TO-DATE
-> Task :libs:redis:classes UP-TO-DATE
 > Task :libs:database:classes UP-TO-DATE
-> Task :libs:redis:jar UP-TO-DATE
+> Task :libs:proto:extractIncludeProto UP-TO-DATE
+> Task :libs:redis:compileJava UP-TO-DATE
+> Task :libs:config:jar UP-TO-DATE
+> Task :libs:redis:classes UP-TO-DATE
 > Task :libs:database:jar UP-TO-DATE
 > Task :libs:jwt:compileJava UP-TO-DATE
+> Task :libs:redis:jar UP-TO-DATE
 > Task :libs:jwt:classes UP-TO-DATE
 > Task :libs:jwt:jar UP-TO-DATE
 > Task :libs:proto:generateProto UP-TO-DATE
+> Task :libs:interservice-caller:compileJava UP-TO-DATE
+> Task :libs:interservice-caller:classes UP-TO-DATE
 > Task :libs:proto:compileJava UP-TO-DATE
+> Task :libs:interservice-caller:jar UP-TO-DATE
 > Task :libs:proto:classes UP-TO-DATE
 > Task :libs:proto:jar UP-TO-DATE
 > Task :services:user-service:compileJava UP-TO-DATE
@@ -41,29 +43,29 @@ Reusing configuration cache.
 
  :: Spring Boot ::                (v3.5.7)
 
-2026-01-26T00:11:47.127+05:30  INFO 31857 --- [           main] c.f.userservice.UserServiceApplication   : Starting UserServiceApplication using Java 21.0.8 with PID 31857 (/Users/swarupbhosale/Desktop/Delivery/finditnow-backend/services/user-service/build/classes/java/main started by swarupbhosale in /Users/swarupbhosale/Desktop/Delivery/finditnow-backend/services/user-service)
-2026-01-26T00:11:47.132+05:30  INFO 31857 --- [           main] c.f.userservice.UserServiceApplication   : No active profile set, falling back to 1 default profile: "default"
-2026-01-26T00:11:48.059+05:30  INFO 31857 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-01-26T00:11:48.143+05:30  INFO 31857 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 70 ms. Found 2 JPA repository interfaces.
-2026-01-26T00:11:48.840+05:30  INFO 31857 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
-2026-01-26T00:11:48.853+05:30  INFO 31857 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-01-26T00:11:48.854+05:30  INFO 31857 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
-2026-01-26T00:11:48.912+05:30  INFO 31857 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
-2026-01-26T00:11:48.914+05:30  INFO 31857 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1713 ms
-2026-01-26T00:11:49.100+05:30  INFO 31857 --- [           main] com.finditnow.redis.RedisStore           : Redis connection successful
-2026-01-26T00:11:49.175+05:30 DEBUG 31857 --- [           main] o.s.w.f.CommonsRequestLoggingFilter      : Filter 'requestLoggingFilter' configured for use
-2026-01-26T00:11:49.562+05:30  INFO 31857 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-01-26T00:11:49.875+05:30  INFO 31857 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@63917fe1
-2026-01-26T00:11:49.877+05:30  INFO 31857 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-01-26T00:11:49.921+05:30  INFO 31857 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5432/user_service (PostgreSQL 15.15)
-2026-01-26T00:11:50.139+05:30  INFO 31857 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 2 migrations (execution time 00:00.045s)
-2026-01-26T00:11:50.169+05:30  INFO 31857 --- [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 2
-2026-01-26T00:11:50.172+05:30  INFO 31857 --- [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
-2026-01-26T00:11:50.262+05:30  INFO 31857 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-01-26T00:11:50.301+05:30  INFO 31857 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
-2026-01-26T00:11:50.322+05:30  INFO 31857 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-01-26T00:11:50.521+05:30  INFO 31857 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-01-26T00:11:50.600+05:30  INFO 31857 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+2026-01-30T21:46:10.067+05:30  INFO 11868 --- [           main] c.f.userservice.UserServiceApplication   : Starting UserServiceApplication using Java 21.0.8 with PID 11868 (/Users/swarupbhosale/Desktop/Project Modules/Shop Owner Dashboard Improvement/backend/services/user-service/build/classes/java/main started by swarupbhosale in /Users/swarupbhosale/Desktop/Project Modules/Shop Owner Dashboard Improvement/backend/services/user-service)
+2026-01-30T21:46:10.068+05:30  INFO 11868 --- [           main] c.f.userservice.UserServiceApplication   : No active profile set, falling back to 1 default profile: "default"
+2026-01-30T21:46:10.510+05:30  INFO 11868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-01-30T21:46:10.567+05:30  INFO 11868 --- [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 50 ms. Found 2 JPA repository interfaces.
+2026-01-30T21:46:10.855+05:30  INFO 11868 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8081 (http)
+2026-01-30T21:46:10.864+05:30  INFO 11868 --- [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-01-30T21:46:10.864+05:30  INFO 11868 --- [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.48]
+2026-01-30T21:46:10.893+05:30  INFO 11868 --- [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-01-30T21:46:10.894+05:30  INFO 11868 --- [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 804 ms
+2026-01-30T21:46:11.007+05:30  INFO 11868 --- [           main] com.finditnow.redis.RedisStore           : Redis connection successful
+2026-01-30T21:46:11.030+05:30 DEBUG 11868 --- [           main] o.s.w.f.CommonsRequestLoggingFilter      : Filter 'requestLoggingFilter' configured for use
+2026-01-30T21:46:11.129+05:30  INFO 11868 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-01-30T21:46:11.253+05:30  INFO 11868 --- [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@1934339
+2026-01-30T21:46:11.254+05:30  INFO 11868 --- [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-01-30T21:46:11.268+05:30  INFO 11868 --- [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:5433/user_service (PostgreSQL 15.15)
+2026-01-30T21:46:11.389+05:30  INFO 11868 --- [           main] o.f.core.internal.command.DbValidate     : Successfully validated 2 migrations (execution time 00:00.035s)
+2026-01-30T21:46:11.459+05:30  INFO 11868 --- [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": 2
+2026-01-30T21:46:11.461+05:30  INFO 11868 --- [           main] o.f.core.internal.command.DbMigrate      : Schema "public" is up to date. No migration necessary.
+2026-01-30T21:46:11.514+05:30  INFO 11868 --- [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-01-30T21:46:11.551+05:30  INFO 11868 --- [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.33.Final
+2026-01-30T21:46:11.570+05:30  INFO 11868 --- [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-01-30T21:46:11.727+05:30  INFO 11868 --- [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-01-30T21:46:11.782+05:30  INFO 11868 --- [           main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
 	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
 	Database driver: undefined/unknown
 	Database version: 15.15
@@ -71,11 +73,29 @@ Reusing configuration cache.
 	Isolation level: undefined/unknown
 	Minimum pool size: undefined/unknown
 	Maximum pool size: undefined/unknown
-2026-01-26T00:11:51.320+05:30  INFO 31857 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-01-26T00:11:51.413+05:30  INFO 31857 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-01-26T00:11:51.610+05:30  INFO 31857 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-30T21:46:12.611+05:30  INFO 11868 --- [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-01-30T21:46:12.756+05:30  INFO 11868 --- [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-01-30T21:46:12.933+05:30  INFO 11868 --- [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-01-30T21:46:14.162+05:30  WARN 11868 --- [           main] o.s.aop.framework.CglibAopProxy          : Unable to proxy interface-implementing method [public final io.grpc.ServerServiceDefinition com.finditnow.user.UserServiceGrpc$UserServiceImplBase.bindService()] because it is marked as final, consider using interface-based JDK proxies instead.
 >>> [GrpcServerConfig] Bean creation triggered
 >>> [GrpcServerConfig] gRPC Server Started on 8082
-2026-01-26T00:11:53.778+05:30  WARN 31857 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-01-26T00:11:54.203+05:30  INFO 31857 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
-2026-01-26T00:11:54.213+05:30  INFO 31857 --- [           main] c.f.userservice.UserServiceApplication   : Started UserServiceApplication in 7.964 seconds (process running for 8.865)
+2026-01-30T21:46:14.317+05:30  WARN 11868 --- [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-01-30T21:46:14.551+05:30  INFO 11868 --- [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8081 (http) with context path '/'
+2026-01-30T21:46:14.556+05:30  INFO 11868 --- [           main] c.f.userservice.UserServiceApplication   : Started UserServiceApplication in 4.763 seconds (process running for 5.301)
+2026-01-30T22:04:36.255+05:30  INFO 11868 --- [nio-8081-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-01-30T22:04:36.264+05:30  INFO 11868 --- [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-01-30T22:04:36.275+05:30  INFO 11868 --- [nio-8081-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 11 ms
+2026-01-30T22:04:36.510+05:30 DEBUG 11868 --- [nio-8081-exec-1] o.s.w.f.CommonsRequestLoggingFilter      : Before request [GET /me, client=127.0.0.1]
+2026-01-30T22:04:36.695+05:30 DEBUG 11868 --- [nio-8081-exec-1] o.s.w.f.CommonsRequestLoggingFilter      : After request [GET /me, client=127.0.0.1]
+2026-01-30T22:04:36.718+05:30 DEBUG 11868 --- [nio-8081-exec-2] o.s.w.f.CommonsRequestLoggingFilter      : Before request [GET /me, client=127.0.0.1]
+2026-01-30T22:04:36.728+05:30 DEBUG 11868 --- [nio-8081-exec-2] o.s.w.f.CommonsRequestLoggingFilter      : After request [GET /me, client=127.0.0.1]
+2026-01-30T22:04:41.378+05:30 DEBUG 11868 --- [nio-8081-exec-3] o.s.w.f.CommonsRequestLoggingFilter      : Before request [GET /me, client=127.0.0.1]
+2026-01-30T22:04:41.423+05:30 DEBUG 11868 --- [nio-8081-exec-3] o.s.w.f.CommonsRequestLoggingFilter      : After request [GET /me, client=127.0.0.1]
+2026-01-30T22:05:03.742+05:30 DEBUG 11868 --- [nio-8081-exec-4] o.s.w.f.CommonsRequestLoggingFilter      : Before request [GET /me, client=127.0.0.1]
+2026-01-30T22:05:03.965+05:30 DEBUG 11868 --- [nio-8081-exec-4] o.s.w.f.CommonsRequestLoggingFilter      : After request [GET /me, client=127.0.0.1]
+2026-01-30T22:05:46.651+05:30 DEBUG 11868 --- [nio-8081-exec-5] o.s.w.f.CommonsRequestLoggingFilter      : Before request [POST /addresses/add, client=127.0.0.1]
+addressdto UserAddressDto(id=null, line1=nmna, line2=khbsk, city=pune, state=mh, country=In, postalCode=412101, addressType=HOME, latitude=51.505, longitude=-0.09, isPrimary=true, fullAddress=null, userId=null)
+address UserAddress(id=null, line1=nmna, line2=khbsk, city=pune, state=mh, country=In, postalCode=412101, isPrimary=true, latitude=51.505, longitude=-0.09, addressType=HOME, fullAddress=null, user=null)
+2026-01-30T22:05:47.524+05:30 DEBUG 11868 --- [nio-8081-exec-5] o.s.w.f.CommonsRequestLoggingFilter      : After request [POST /addresses/add, client=127.0.0.1, payload={"line1":"nmna","line2":"khbsk","city":"pune","state":"mh","postalCode":"412101","country":"In","latitude":51.505,"longitude":-0.09,"addressType":"HOME","isPrimary":true,"isLocationSet":true}]
+2026-01-30T22:06:17.653+05:30 DEBUG 11868 --- [nio-8081-exec-6] o.s.w.f.CommonsRequestLoggingFilter      : Before request [GET /me, client=127.0.0.1]
+2026-01-30T22:06:17.708+05:30 DEBUG 11868 --- [nio-8081-exec-6] o.s.w.f.CommonsRequestLoggingFilter      : After request [GET /me, client=127.0.0.1]

@@ -26,7 +26,7 @@ public class AuthApp {
 
         try {
             String grpcHost = Config.get("USER_SERVICE_GRPC_HOST", "localhost");
-            int grpcPort = Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"));
+            int grpcPort = Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8082"));
 
             GrpcHealthChecker.waitForGrpcServer(grpcHost, grpcPort, 10, 2000);
 

@@ -1,44 +1,43 @@
-To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/9.2.0/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
-Daemon will be stopped at the end of the build 
+Starting a Gradle Daemon, 1 busy and 2 stopped Daemons could not be reused, use --status for details
 Reusing configuration cache.
-> Task :libs:mail:processResources NO-SOURCE
-> Task :libs:config:processResources NO-SOURCE
-> Task :libs:database:processResources NO-SOURCE
-> Task :libs:dispatcher:processResources NO-SOURCE
 > Task :libs:common:processResources NO-SOURCE
 > Task :libs:jwt:processResources NO-SOURCE
+> Task :libs:dispatcher:processResources NO-SOURCE
+> Task :libs:database:processResources NO-SOURCE
+> Task :libs:config:processResources NO-SOURCE
+> Task :libs:mail:processResources NO-SOURCE
 > Task :libs:proto:protobufDummy UP-TO-DATE
-> Task :libs:redis:processResources NO-SOURCE
 > Task :libs:quartz-scheduler:processResources NO-SOURCE
-> Task :services:auth:processResources UP-TO-DATE
+> Task :libs:redis:processResources NO-SOURCE
 > Task :libs:proto:extractProto UP-TO-DATE
+> Task :services:auth:processResources UP-TO-DATE
 > Task :libs:common:compileJava UP-TO-DATE
-> Task :libs:common:classes UP-TO-DATE
-> Task :libs:proto:processResources UP-TO-DATE
 > Task :libs:config:compileJava UP-TO-DATE
+> Task :libs:common:classes UP-TO-DATE
 > Task :libs:config:classes UP-TO-DATE
+> Task :libs:proto:processResources UP-TO-DATE
 > Task :libs:common:jar UP-TO-DATE
 > Task :libs:config:jar UP-TO-DATE
+> Task :libs:proto:extractIncludeProto UP-TO-DATE
 > Task :libs:database:compileJava UP-TO-DATE
-> Task :libs:mail:compileJava UP-TO-DATE
-> Task :libs:redis:compileJava UP-TO-DATE
 > Task :libs:database:classes UP-TO-DATE
+> Task :libs:mail:compileJava UP-TO-DATE
 > Task :libs:mail:classes UP-TO-DATE
+> Task :libs:redis:compileJava UP-TO-DATE
 > Task :libs:redis:classes UP-TO-DATE
 > Task :libs:mail:jar UP-TO-DATE
 > Task :libs:database:jar UP-TO-DATE
-> Task :libs:proto:extractIncludeProto UP-TO-DATE
 > Task :libs:redis:jar UP-TO-DATE
-> Task :libs:jwt:compileJava UP-TO-DATE
-> Task :libs:jwt:classes UP-TO-DATE
 > Task :libs:quartz-scheduler:compileJava UP-TO-DATE
 > Task :libs:quartz-scheduler:classes UP-TO-DATE
-> Task :libs:jwt:jar UP-TO-DATE
+> Task :libs:jwt:compileJava UP-TO-DATE
+> Task :libs:jwt:classes UP-TO-DATE
 > Task :libs:quartz-scheduler:jar UP-TO-DATE
+> Task :libs:jwt:jar UP-TO-DATE
 > Task :libs:dispatcher:compileJava UP-TO-DATE
 > Task :libs:dispatcher:classes UP-TO-DATE
-> Task :libs:dispatcher:jar UP-TO-DATE
 > Task :libs:proto:generateProto UP-TO-DATE
+> Task :libs:dispatcher:jar UP-TO-DATE
 > Task :libs:proto:compileJava UP-TO-DATE
 > Task :libs:proto:classes UP-TO-DATE
 > Task :libs:proto:jar UP-TO-DATE
@@ -46,23 +45,30 @@ Reusing configuration cache.
 > Task :services:auth:classes UP-TO-DATE
 
 > Task :services:auth:run
-00:11:55.540 [INFO] c.f.auth.config.GrpcHealthChecker - Checking gRPC server availability at localhost:8082
-00:11:56.184 [INFO] c.f.auth.config.GrpcHealthChecker - gRPC server became READY on attempt 1
-00:11:56.219 [INFO] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
-00:11:56.479 [INFO] com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@3a3e78f
-00:11:56.480 [INFO] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
-00:11:56.483 [INFO] com.finditnow.database.Database - Database connection successful
-00:11:57.333 [INFO] org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://localhost:5432/auth_service (PostgreSQL 15.15)
-00:11:57.554 [INFO] o.f.core.internal.command.DbValidate - Successfully validated 6 migrations (execution time 00:00.036s)
-00:11:57.649 [INFO] o.f.core.internal.command.DbMigrate - Current version of schema "auth_service_schema": 5
-00:11:57.653 [INFO] o.f.core.internal.command.DbMigrate - Schema "auth_service_schema" is up to date. No migration necessary.
-00:11:57.870 [INFO] com.finditnow.redis.RedisStore - Redis connection successful
-00:11:57.929 [INFO] org.quartz.impl.StdSchedulerFactory - Using default implementation for ThreadExecutor
-00:11:57.930 [INFO] org.quartz.simpl.SimpleThreadPool - Job execution threads will use class loader of thread: main
-00:11:57.937 [INFO] o.quartz.core.SchedulerSignalerImpl - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
-00:11:57.938 [INFO] org.quartz.core.QuartzScheduler - Quartz Scheduler v2.5.1 created.
-00:11:57.938 [INFO] org.quartz.simpl.RAMJobStore - RAMJobStore initialized.
-00:11:57.938 [INFO] org.quartz.core.QuartzScheduler - Scheduler meta-data: Quartz Scheduler (v2.5.1) 'DefaultQuartzScheduler' with instanceId 'NON_CLUSTERED'
+21:47:02.688 [INFO] c.f.auth.config.GrpcHealthChecker - Checking gRPC server availability at localhost:8082
+21:47:03.326 [INFO] c.f.auth.config.GrpcHealthChecker - gRPC server became READY on attempt 1
+21:47:03.339 [INFO] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Starting...
+21:47:03.640 [INFO] com.zaxxer.hikari.pool.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5c8504fd
+21:47:03.641 [INFO] com.zaxxer.hikari.HikariDataSource - HikariPool-1 - Start completed.
+21:47:03.642 [INFO] com.finditnow.database.Database - Database connection successful
+21:47:03.866 [INFO] org.flywaydb.core.FlywayExecutor - Database: jdbc:postgresql://localhost:5433/auth_service (PostgreSQL 15.15)
+21:47:03.947 [INFO] o.f.c.i.s.JdbcTableSchemaHistory - Schema history table "public"."flyway_schema_history" does not exist yet
+21:47:03.950 [INFO] o.f.core.internal.command.DbValidate - Successfully validated 5 migrations (execution time 00:00.020s)
+21:47:03.987 [INFO] o.f.c.i.s.JdbcTableSchemaHistory - Creating Schema History table "public"."flyway_schema_history" ...
+21:47:04.079 [INFO] o.f.core.internal.command.DbMigrate - Current version of schema "public": << Empty Schema >>
+21:47:04.096 [INFO] o.f.core.internal.command.DbMigrate - Migrating schema "public" to version "1 - create auth credentials"
+21:47:04.164 [INFO] o.f.core.internal.command.DbMigrate - Migrating schema "public" to version "2 - create auth sessions"
+21:47:04.202 [INFO] o.f.core.internal.command.DbMigrate - Migrating schema "public" to version "3 - create auth oauth google"
+21:47:04.227 [INFO] o.f.core.internal.command.DbMigrate - Migrating schema "public" to version "4 - add role enum"
+21:47:04.241 [INFO] o.f.core.internal.command.DbMigrate - Migrating schema "public" to version "5 - alter cred add role"
+21:47:04.253 [INFO] o.f.core.internal.command.DbMigrate - Successfully applied 5 migrations to schema "public", now at version v5 (execution time 00:00.089s)
+21:47:04.409 [INFO] com.finditnow.redis.RedisStore - Redis connection successful
+21:47:04.443 [INFO] org.quartz.impl.StdSchedulerFactory - Using default implementation for ThreadExecutor
+21:47:04.444 [INFO] org.quartz.simpl.SimpleThreadPool - Job execution threads will use class loader of thread: main
+21:47:04.448 [INFO] o.quartz.core.SchedulerSignalerImpl - Initialized Scheduler Signaller of type: class org.quartz.core.SchedulerSignalerImpl
+21:47:04.449 [INFO] org.quartz.core.QuartzScheduler - Quartz Scheduler v2.5.1 created.
+21:47:04.449 [INFO] org.quartz.simpl.RAMJobStore - RAMJobStore initialized.
+21:47:04.449 [INFO] org.quartz.core.QuartzScheduler - Scheduler meta-data: Quartz Scheduler (v2.5.1) 'DefaultQuartzScheduler' with instanceId 'NON_CLUSTERED'
   Scheduler class: 'org.quartz.core.QuartzScheduler' - running locally.
   NOT STARTED.
   Currently in standby mode.
@@ -70,14 +76,54 @@ Reusing configuration cache.
   Using thread pool 'org.quartz.simpl.SimpleThreadPool' - with 10 threads.
   Using job-store 'org.quartz.simpl.RAMJobStore' - which does not support persistence. and is not clustered.
 
-00:11:57.938 [INFO] org.quartz.impl.StdSchedulerFactory - Quartz scheduler 'DefaultQuartzScheduler' initialized from default resource file in Quartz package: 'quartz.properties'
-00:11:57.938 [INFO] org.quartz.impl.StdSchedulerFactory - Quartz scheduler version: 2.5.1
-00:11:57.938 [INFO] org.quartz.core.QuartzScheduler - Scheduler DefaultQuartzScheduler_$_NON_CLUSTERED started.
-00:11:57.959 [INFO] io.undertow - starting server: Undertow - 2.3.20.Final
-00:11:57.965 [INFO] org.xnio - XNIO version 3.8.16.Final
-00:11:57.973 [INFO] org.xnio.nio - XNIO NIO Implementation Version 3.8.16.Final
-00:11:57.991 [INFO] org.jboss.threads - JBoss Threads version 3.7.0.Final
-00:11:58.181 [INFO] c.finditnow.auth.server.HTTPServer - Auth Server started on port: 8080
-00:13:15.631 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /api/auth/signup -> 404 (125 ms)
-00:14:35.806 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /api/auth/signup -> 404 (320 ms)
-00:18:09.029 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /api/auth/signin -> 404 (50 ms)
+21:47:04.449 [INFO] org.quartz.impl.StdSchedulerFactory - Quartz scheduler 'DefaultQuartzScheduler' initialized from default resource file in Quartz package: 'quartz.properties'
+21:47:04.449 [INFO] org.quartz.impl.StdSchedulerFactory - Quartz scheduler version: 2.5.1
+21:47:04.449 [INFO] org.quartz.core.QuartzScheduler - Scheduler DefaultQuartzScheduler_$_NON_CLUSTERED started.
+21:47:04.472 [INFO] io.undertow - starting server: Undertow - 2.3.20.Final
+21:47:04.477 [INFO] org.xnio - XNIO version 3.8.16.Final
+21:47:04.483 [INFO] org.xnio.nio - XNIO NIO Implementation Version 3.8.16.Final
+21:47:04.493 [INFO] org.jboss.threads - JBoss Threads version 3.7.0.Final
+21:47:04.609 [INFO] c.finditnow.auth.server.HTTPServer - Auth Server started on port: 8080
+21:53:31.952 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signin -> 400 (89 ms)
+21:53:57.301 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signin -> 401 (201 ms)
+21:54:42.591 [INFO] c.f.a.handlers.RequestLoggingHandler - GET /signin -> 405 (15 ms)
+21:58:25.060 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signin -> 401 (614 ms)
+22:01:20.271 [WARN] c.f.a.transaction.TransactionManager - Transaction rolled back due to error: No enum constant com.finditnow.auth.types.Role.USER
+22:01:20.272 [ERROR] c.finditnow.auth.service.AuthService - Signup failed
+java.lang.IllegalArgumentException: No enum constant com.finditnow.auth.types.Role.USER
+	at java.base/java.lang.Enum.valueOf(Enum.java:293)
+	at com.finditnow.auth.types.Role.valueOf(Role.java:3)
+	at com.finditnow.auth.model.AuthCredential.<init>(AuthCredential.java:50)
+	at com.finditnow.auth.service.AuthService.lambda$signUp$0(AuthService.java:77)
+	at com.finditnow.auth.transaction.TransactionManager.executeInTransaction(TransactionManager.java:34)
+	at com.finditnow.auth.service.AuthService.signUp(AuthService.java:53)
+	at com.finditnow.auth.controller.AuthController.signUp(AuthController.java:38)
+	at io.undertow.server.RoutingHandler.handleRequest(RoutingHandler.java:93)
+	at com.finditnow.auth.handlers.JwtAuthHandler.handleRequest(JwtAuthHandler.java:79)
+	at com.finditnow.auth.handlers.RequestLoggingHandler.handleRequest(RequestLoggingHandler.java:42)
+	at io.undertow.server.Connectors.executeRootHandler(Connectors.java:395)
+	at io.undertow.server.HttpServerExchange$1.run(HttpServerExchange.java:900)
+	at org.jboss.threads.ContextHandler$1.runWith(ContextHandler.java:18)
+	at org.jboss.threads.EnhancedQueueExecutor$Task.doRunWith(EnhancedQueueExecutor.java:2691)
+	at org.jboss.threads.EnhancedQueueExecutor$Task.run(EnhancedQueueExecutor.java:2670)
+	at org.jboss.threads.EnhancedQueueExecutor$ThreadBody.run(EnhancedQueueExecutor.java:1615)
+	at org.xnio.XnioWorker$WorkerThreadFactory$1$1.run(XnioWorker.java:1282)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+22:01:20.310 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signup -> 500 (663 ms)
+22:02:00.281 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signup -> 201 (487 ms)
+Mail sent successfully to newuser@test.com
+22:03:36.745 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /signup -> 201 (412 ms)
+Mail sent successfully to testuser2@example.com
+22:04:18.371 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /resendverificationemail -> 201 (87 ms)
+Mail sent successfully to testuser2@example.com
+TTLMillis: 604799888
+22:04:36.012 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /verifyemail -> 200 (2491 ms)
+TTLMillis: 604799993
+22:04:36.094 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /verifyemail -> 200 (842 ms)
+TTLMillis: 604799997
+22:04:41.315 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /refresh -> 200 (88 ms)
+TTLMillis: 604799995
+22:05:03.569 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /refresh -> 200 (292 ms)
+TTLMillis: 604799992
+22:06:17.617 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /refresh -> 200 (183 ms)
+22:06:44.068 [INFO] c.f.a.handlers.RequestLoggingHandler - POST /logout -> 200 (322 ms)
