@@ -25,6 +25,7 @@ public class DeliveryService {
     private final DeliveryRepository deliveryRepository;
     private final DeliveryAgentRepository deliveryAgentRepository;
     private final AssignmentService assignmentService;
+    private final com.finditnow.deliveryservice.clients.OrderClient orderClient;
 
     private static final double EARTH_RADIUS = 6371; // km
 
@@ -157,6 +158,13 @@ public class DeliveryService {
                 deliveryAgentRepository.save(agent);
             }
 
+            // Sync order status for terminal delivery states
+            if (newStatus == DeliveryStatus.DELIVERED) {
+                orderClient.updateOrderStatus(delivery.getOrderId(), "DELIVERED");
+            } else if (newStatus == DeliveryStatus.FAILED || newStatus == DeliveryStatus.CANCELLED) {
+                orderClient.updateOrderStatus(delivery.getOrderId(), "CANCELLED");
+            }
+
             try {
                 assignmentService.attemptAssignment();
             } catch (Exception e) {
@@ -182,13 +190,18 @@ public class DeliveryService {
         }
 
         // Validate delivery is in valid state for completion
-        if (!DeliveryStatus.PICKED_UP.equals(delivery.getStatus())) {
-            throw new RuntimeException("Invalid state: Delivery must be picked up before completion");
+        if (!DeliveryStatus.PICKED_UP.equals(delivery.getStatus())
+                && !DeliveryStatus.IN_TRANSIT.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Delivery must be picked up or in transit before completion");
         }
 
         delivery.setStatus(DeliveryStatus.DELIVERED);
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} completed by agent {}", deliveryId, agentId);
+
+        // Sync order status
+        orderClient.updateOrderStatus(delivery.getOrderId(), "DELIVERED");
+
         return mapToResponse(updatedDelivery);
     }
 
@@ -214,6 +227,10 @@ public class DeliveryService {
         delivery.setStatus(DeliveryStatus.CANCELLED_BY_AGENT);
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} cancelled by agent {}", deliveryId, agentId);
+
+        // Sync order status
+        orderClient.updateOrderStatus(delivery.getOrderId(), "CANCELLED");
+
         return mapToResponse(updatedDelivery);
     }
 

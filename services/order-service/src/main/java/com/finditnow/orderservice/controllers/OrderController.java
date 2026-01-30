@@ -2,6 +2,7 @@ package com.finditnow.orderservice.controllers;
 
 import com.finditnow.orderservice.dtos.CreateOrderFromCartRequest;
 import com.finditnow.orderservice.dtos.OrderResponse;
+import com.finditnow.orderservice.dtos.StatusUpdateRequest;
 import com.finditnow.orderservice.services.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -49,5 +50,13 @@ public class OrderController {
             @RequestParam Long shopId,
             @RequestParam UUID addressId) {
         return ResponseEntity.ok(orderService.getDeliveryQuote(shopId, addressId));
+    }
+
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable UUID orderId,
+            @RequestBody StatusUpdateRequest request) {
+        OrderResponse order = orderService.updateOrderStatus(orderId, request.getStatus());
+        return ResponseEntity.ok(order);
     }
 }

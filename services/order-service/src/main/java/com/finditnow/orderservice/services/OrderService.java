@@ -100,7 +100,7 @@ public class OrderService {
         // 8. For COD, mark as confirmed
         if (savedOrder.getPaymentMethod() == Order.PaymentMethod.CASH_ON_DELIVERY) {
             savedOrder.setStatus(Order.OrderStatus.CONFIRMED);
-//            savedOrder = orderDao.save(savedOrder);
+            // savedOrder = orderDao.save(savedOrder);
 
             // Initiate Delivery for COD
             initiateDelivery(savedOrder);
@@ -225,5 +225,22 @@ public class OrderService {
                 .build();
 
         deliveryClient.initiateDelivery(request);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(UUID orderId, String statusStr) {
+        Order order = orderDao.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found: " + orderId));
+
+        try {
+            Order.OrderStatus newStatus = Order.OrderStatus.valueOf(statusStr);
+            order.setStatus(newStatus);
+            Order updatedOrder = orderDao.save(order);
+            log.info("Order {} status updated to {}", orderId, statusStr);
+            return mapToOrderResponse(updatedOrder);
+        } catch (IllegalArgumentException e) {
+            log.error("Invalid order status: {}", statusStr);
+            throw new RuntimeException("Invalid order status: " + statusStr);
+        }
     }
 }
