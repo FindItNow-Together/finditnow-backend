@@ -32,7 +32,6 @@ public class InventoryController extends BaseController {
      * @return ResponseEntity with list of inventory items
      */
     @GetMapping("/inventory")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<InventoryResponse>> getShopInventory(@PathVariable Long shopId) {
         List<InventoryResponse> inventory = shopInventoryService.findAllByShopId(shopId);
         return ResponseEntity.ok(inventory);
@@ -46,7 +45,6 @@ public class InventoryController extends BaseController {
      * @return ResponseEntity with inventory item
      */
     @GetMapping("/inventory/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<InventoryResponse> getInventory(@PathVariable Long id) {
         InventoryResponse inventory = shopInventoryService.findById(id);
         return ResponseEntity.ok(inventory);

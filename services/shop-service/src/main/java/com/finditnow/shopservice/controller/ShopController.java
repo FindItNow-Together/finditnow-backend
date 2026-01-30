@@ -72,7 +72,6 @@ public class ShopController extends BaseController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<ShopResponse> getShop(@PathVariable Long id) {
         ShopResponse shop = shopService.getShopById(id);
         return ResponseEntity.ok(shop);
@@ -137,7 +136,6 @@ public class ShopController extends BaseController {
     }
 
     @GetMapping("/{shopId}/products")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<ProductResponse>> getProductsByShop(@PathVariable Long shopId) {
         List<ProductResponse> products = productService.getProductsByShop(shopId);
         return ResponseEntity.ok(products);

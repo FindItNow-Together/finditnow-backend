@@ -36,21 +36,28 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
+                        // Public endpoints - search and categories
                         .requestMatchers(
                                 "/search/**",
                                 "/categories/**",
                                 "/api/search/**",
                                 "/api/categories/**",
-                                "/api/categories/**",
                                 "/api/shops/search"
                         ).permitAll()
 
-                        // Product endpoints
-                        .requestMatchers("/products/**", "/api/products/**").hasAnyRole("SHOP", "ADMIN")
+                        // Allow public READ access to shops, products, and inventory
+                        .requestMatchers("GET", "/shop/**", "/api/shop/**").permitAll()
+                        .requestMatchers("GET", "/product/**", "/api/product/**").permitAll()
 
-                        // Shop endpoints are protected by @PreAuthorize on controller methods
-                        // All other requests (shop endpoints) - let @PreAuthorize handle authorization
+                        // Require authentication for CREATE/UPDATE/DELETE operations
+                        .requestMatchers("POST", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("PUT", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("DELETE", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("POST", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("PUT", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("DELETE", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+
+                        // All other requests require authentication
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

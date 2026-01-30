@@ -35,7 +35,6 @@ public class ProductController extends BaseController {
     }
 
     @GetMapping("/all")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<PagedResponse<ProductResponse>> getAllProducts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -43,7 +42,6 @@ public class ProductController extends BaseController {
     }
 
     @GetMapping("/search")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
     public ResponseEntity<List<ProductResponse>> searchProducts(
             @RequestParam String query) {
         return ResponseEntity.ok(productService.searchProducts(query));
