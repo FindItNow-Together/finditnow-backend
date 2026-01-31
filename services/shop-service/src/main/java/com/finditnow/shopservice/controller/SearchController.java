@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-
 @RestController
 @RequestMapping("/search")
 public class SearchController {
@@ -21,10 +20,12 @@ public class SearchController {
     }
 
     @GetMapping("/products")
-    public ApiResponse<PagedResponse<SearchOpportunityResponse>>
-        searchProducts(@RequestParam String q, @RequestParam(required = false) Double lat, @RequestParam(required = false) Double lng, @RequestParam(defaultValue = "BOTH") String fulfillment, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-            return ApiResponse.<PagedResponse<SearchOpportunityResponse>>builder()
-                    .data(searchService.searchProducts(q, lat, lng, fulfillment, page, size)).success(true).build();
+    public ApiResponse<PagedResponse<SearchOpportunityResponse>> searchProducts(@RequestParam String q,
+            @RequestParam(required = false) Double lat, @RequestParam(required = false) Double lng,
+            @RequestParam(defaultValue = "BOTH") String fulfillment, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Long shopId) {
+        return ApiResponse.<PagedResponse<SearchOpportunityResponse>>builder()
+                .data(searchService.searchProducts(q, lat, lng, fulfillment, page, size, shopId)).success(true).build();
     }
 
     @GetMapping("/global")

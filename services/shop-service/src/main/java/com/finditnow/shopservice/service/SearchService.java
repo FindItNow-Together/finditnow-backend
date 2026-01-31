@@ -15,13 +15,15 @@ public class SearchService {
     private final ShopService shopService;
     private final ShopInventoryService shopInventoryService;
 
-    public SearchService(ProductService productService, ShopService shopService, ShopInventoryService shopInventoryService) {
+    public SearchService(ProductService productService, ShopService shopService,
+            ShopInventoryService shopInventoryService) {
         this.productService = productService;
         this.shopService = shopService;
         this.shopInventoryService = shopInventoryService;
     }
 
-    public PagedResponse<SearchOpportunityResponse> searchProducts(String query, Double lat, Double lng, String fulfillment, int page, int size) {
+    public PagedResponse<SearchOpportunityResponse> searchProducts(String query, Double lat, Double lng,
+            String fulfillment, int page, int size, Long shopId) {
         FulfillmentPreference preference = FulfillmentPreference.from(fulfillment);
 
         Optional<Location> userLocation = Optional.empty();
@@ -30,7 +32,12 @@ public class SearchService {
             userLocation = Optional.of(new Location(lat, lng));
         }
 
-        List<InventoryResponse> inventories = shopInventoryService.searchByProductName(query);
+        List<InventoryResponse> inventories;
+        if (shopId != null) {
+            inventories = shopInventoryService.searchByProductName(query, shopId);
+        } else {
+            inventories = shopInventoryService.searchByProductName(query);
+        }
 
         List<SearchOpportunityResponse> opportunities = new ArrayList<>();
 
@@ -38,11 +45,14 @@ public class SearchService {
             ProductResponse prod = productService.getById(inventory.getProduct().getId());
             ShopResponse shop = shopService.getShopById(inventory.getShop().getId());
 
-            FulfillmentMode fulfillmentMode = "NO_DELIVERY".equals(shop.getDeliveryOption()) ? FulfillmentMode.PICKUP : FulfillmentMode.DELIVERY;
+            FulfillmentMode fulfillmentMode = "NO_DELIVERY".equals(shop.getDeliveryOption()) ? FulfillmentMode.PICKUP
+                    : FulfillmentMode.DELIVERY;
 
-            if (!preference.allows(fulfillmentMode)) continue;
+            if (!preference.allows(fulfillmentMode))
+                continue;
 
-            InventorySearchResponse inventorySearchResponse = new InventorySearchResponse(inventory.getId(), inventory.getReservedStock(), inventory.getPrice(), inventory.getStock());
+            InventorySearchResponse inventorySearchResponse = new InventorySearchResponse(inventory.getId(),
+                    inventory.getReservedStock(), inventory.getPrice(), inventory.getStock());
 
             Double distance = null;
             if (userLocation.isPresent()) {
@@ -64,22 +74,19 @@ public class SearchService {
                 .comparing(SearchOpportunityResponse::getFulfillmentMode)
                 .thenComparing(
                         SearchOpportunityResponse::getDistanceInKm,
-                        Comparator.nullsLast(Double::compareTo)
-                )
-        );
+                        Comparator.nullsLast(Double::compareTo)));
 
         return buildPagedResponseFromOpportunities(opportunities, page, size);
     }
 
-    public PagedResponse<SearchOpportunityResponse> buildPagedResponseFromOpportunities
-            (List<SearchOpportunityResponse> opportunities, int page, int size) {
+    public PagedResponse<SearchOpportunityResponse> buildPagedResponseFromOpportunities(
+            List<SearchOpportunityResponse> opportunities, int page, int size) {
         int from = page * size;
         int to = Math.min(from + size, opportunities.size());
 
-        List<SearchOpportunityResponse> pageContent =
-                from >= opportunities.size()
-                        ? List.of()
-                        : opportunities.subList(from, to);
+        List<SearchOpportunityResponse> pageContent = from >= opportunities.size()
+                ? List.of()
+                : opportunities.subList(from, to);
 
         PagedResponse<SearchOpportunityResponse> response = new PagedResponse<>();
         response.setContent(pageContent);

@@ -10,8 +10,11 @@ import java.util.List;
 public interface ShopInventoryRepository extends JpaRepository<ShopInventory, Long> {
     List<ShopInventory> findByShopId(long shopId);
 
-    @Query("SELECT inv FROM ShopInventory inv WHERE lower(inv.product.name)  LIKE lower(concat('%', :prodName, '%') )")
+    @Query("SELECT inv FROM ShopInventory inv WHERE lower(inv.product.name) LIKE lower(concat('%', :prodName, '%'))")
     List<ShopInventory> searchByProductName(@Param("prodName") String prodName);
+
+    @Query("SELECT inv FROM ShopInventory inv WHERE inv.shop.id = :shopId AND lower(inv.product.name) LIKE lower(concat('%', :prodName, '%'))")
+    List<ShopInventory> searchByProductNameAndShopId(@Param("prodName") String prodName, @Param("shopId") Long shopId);
 
     @Query("SELECT inv FROM ShopInventory inv WHERE inv.product.id = :productId")
     List<ShopInventory> findByProductId(@Param("productId") Long productId);
