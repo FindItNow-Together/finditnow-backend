@@ -130,13 +130,13 @@ public class CartController extends BaseController {
 
     /**
      * Clear all items from a cart
-     * DELETE /api/cart/{cartId}/clear
+     * DELETE /api/cart/{cartId}/consume
      * <p>
      * Internal use only
      */
     @DeleteMapping("/{cartId}/internal/consume")
     @PreAuthorize("hasRole('SERVICE')")
-    public ResponseEntity<Void> clearCart(@PathVariable UUID cartId) {
+    public ResponseEntity<Void> consumeCart(@PathVariable UUID cartId) {
         cartService.consumeCart(cartId);
         return ResponseEntity.noContent().build();
     }
