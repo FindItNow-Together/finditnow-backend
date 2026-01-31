@@ -11,6 +11,7 @@ import com.finditnow.orderservice.entities.OrderItem;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -125,6 +126,21 @@ public class OrderService {
         return orderDao.findByUserId(userId).stream()
                 .map(this::mapToOrderResponse)
                 .collect(Collectors.toList());
+    }
+
+    public Page<OrderResponse> getShopOrders(Long shopId, int page, int size) {
+        // In a real scenario, you'd verify if the authenticated user owns this shop
+        return orderDao.findByShopId(shopId, page, size)
+                .map(this::mapToOrderResponse);
+    }
+
+    public Double getShopEarnings(Long shopId) {
+        Double earnings = orderDao.calculateTotalEarnings(shopId);
+        return earnings != null ? earnings : 0.0;
+    }
+
+    public List<String> getRecentShopProducts(Long shopId) {
+        return orderDao.findRecentProducts(shopId);
     }
 
     @Transactional

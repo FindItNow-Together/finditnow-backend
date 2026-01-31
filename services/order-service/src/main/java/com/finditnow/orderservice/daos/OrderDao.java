@@ -1,9 +1,13 @@
 package com.finditnow.orderservice.daos;
 
 import com.finditnow.orderservice.entities.Order;
+
 import com.finditnow.orderservice.repositories.OrderRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,6 +34,20 @@ public class OrderDao {
 
     public List<Order> findByShopId(Long shopId) {
         return orderRepository.findByShopIdOrderByCreatedAtDesc(shopId);
+    }
+
+    public Page<Order> findByShopId(Long shopId, int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return orderRepository.findByShopId(shopId, pageable);
+    }
+
+    public Double calculateTotalEarnings(Long shopId) {
+        return orderRepository.calculateTotalEarningsByShopId(shopId);
+    }
+
+    public List<String> findRecentProducts(Long shopId) {
+        // Fetch top 5 recent unique products
+        return orderRepository.findRecentProductNamesByShopId(shopId, PageRequest.of(0, 5));
     }
 
     @Transactional
