@@ -295,47 +295,17 @@ public class DeliveryService {
             throw new RuntimeException("Unauthorized: You are not assigned to this delivery");
         }
 
-        // Validate delivery is in valid state for completion
-        if (!DeliveryStatus.PICKED_UP.equals(delivery.getStatus())
-                && !DeliveryStatus.IN_TRANSIT.equals(delivery.getStatus())) {
-            throw new RuntimeException("Invalid state: Delivery must be picked up or in transit before completion");
+        // Validate delivery is in valid state for completion (after acceptance)
+        DeliveryStatus currentStatus = delivery.getStatus();
+        if (!DeliveryStatus.ASSIGNED.equals(currentStatus)
+                && !DeliveryStatus.PICKED_UP.equals(currentStatus)
+                && !DeliveryStatus.IN_TRANSIT.equals(currentStatus)) {
+            throw new RuntimeException(
+                    "Invalid state: Delivery must be assigned, picked up, or in transit before completion");
         }
 
         // Update status to DELIVERED (this will sync to order via updateStatus)
         return updateStatus(deliveryId, DeliveryStatus.DELIVERED);
-    }
-
-    /**
-     * Helper method used by old completeDelivery flow - deprecated in favor of
-     * updateStatus
-     */
-    @Deprecated
-    private DeliveryResponse legacyCompleteDelivery(UUID deliveryId, UUID agentId) {
-        Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
-
-        delivery.setStatus(DeliveryStatus.DELIVERED);
-        Delivery updatedDelivery = deliveryRepository.save(delivery);
-        log.info("Delivery {} completed by agent {}", deliveryId, agentId);
-
-        // Free up the agent - OLD WAY
-        DeliveryAgent agent = deliveryAgentRepository.findById(agentId)
-                .orElseThrow(() -> new RuntimeException("Agent not found: " + agentId));
-        agent.setStatus(DeliveryAgentStatus.AVAILABLE);
-        agent.setCurrentDeliveryId(null);
-        deliveryAgentRepository.save(agent);
-
-        // Sync order status
-        orderClient.updateOrderStatus(delivery.getOrderId(), "DELIVERED");
-
-        // Try to assign next delivery to this or other agents
-        try {
-            assignmentService.attemptAssignment();
-        } catch (Exception e) {
-            log.error("Re-assignment failed after delivery completion, continuing", e);
-        }
-
-        return mapToResponse(updatedDelivery);
     }
 
     /**
@@ -353,8 +323,10 @@ public class DeliveryService {
         // Validate delivery is not already completed or delivered
         if (DeliveryStatus.DELIVERED.equals(delivery.getStatus()) ||
                 DeliveryStatus.CANCELLED.equals(delivery.getStatus()) ||
-                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus())) {
-            throw new RuntimeException("Invalid state: Cannot cancel a completed or already cancelled delivery");
+                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus()) ||
+                DeliveryStatus.FAILED.equals(delivery.getStatus())) {
+            throw new RuntimeException(
+                    "Invalid state: Cannot cancel a completed, failed, or already cancelled delivery");
         }
 
         delivery.setStatus(DeliveryStatus.CANCELLED_BY_AGENT);
@@ -393,11 +365,12 @@ public class DeliveryService {
             throw new RuntimeException("Unauthorized: You are not assigned to this delivery");
         }
 
-        // Validate delivery is not completed, delivered, or cancelled
+        // Validate delivery is not completed, delivered, cancelled, or failed
         if (DeliveryStatus.DELIVERED.equals(delivery.getStatus()) ||
                 DeliveryStatus.CANCELLED.equals(delivery.getStatus()) ||
-                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus())) {
-            throw new RuntimeException("Invalid state: Cannot opt out of a completed or cancelled delivery");
+                DeliveryStatus.CANCELLED_BY_AGENT.equals(delivery.getStatus()) ||
+                DeliveryStatus.FAILED.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Cannot opt out of a completed, failed, or cancelled delivery");
         }
 
         // Track this agent as opted-out for this delivery
