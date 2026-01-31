@@ -49,7 +49,13 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
         }
 
         try {
-            if(jwt.isServiceToken(token)) {
+            if (jwt.isServiceToken(token)) {
+                List<SimpleGrantedAuthority> serviceAuthorities = Collections.singletonList(
+                        new SimpleGrantedAuthority("ROLE_SERVICE"));
+                UsernamePasswordAuthenticationToken serviceAuth = new UsernamePasswordAuthenticationToken(
+                        "service", null, serviceAuthorities);
+                SecurityContextHolder.getContext().setAuthentication(serviceAuth);
+                request.setAttribute("profile", "SERVICE");
                 filterChain.doFilter(request, response);
                 return;
             }

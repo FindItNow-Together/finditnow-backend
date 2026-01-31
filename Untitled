@@ -1,0 +1,27 @@
+#SERVICE PORTS
+AUTH_SERVICE_PORT=8080
+USER_SERVICE_PORT=8081
+SHOP_SERVICE_PORT=8083
+ORDER_SERVICE_PORT=8084
+DELIVERY_SERVICE_PORT=8086
+FILE_GATEWAY_SERVICE_PORT=8090
+
+#Docker Postgres Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=devuser
+DB_PASSWORD=dev@123
+DB_POOL_SIZE=5
+DB_DDL_AUTO=validate
+DB_TIMEZONE=Asia/Kolkata
+
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# JWT Configuration
+JWT_SECRET=256bit-base64-url-encoded-string
+
+# SMTP Email Server Configuration
+EMAIL_APP_USERNAME=services.mancomunited@gmail.com
+EMAIL_APP_PWD="app_email_app_password"
