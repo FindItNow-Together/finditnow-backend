@@ -112,7 +112,7 @@ public class SearchService {
         }
 
         // Search products (using existing method)
-        PagedResponse<SearchOpportunityResponse> productResults = searchProducts(query, lat, lng, "BOTH", 0, productLimit);
+        PagedResponse<SearchOpportunityResponse> productResults = searchProducts(query, lat, lng, "BOTH", 0, productLimit, null);
 
         // Build response
         return GlobalSearchResponse.builder()
