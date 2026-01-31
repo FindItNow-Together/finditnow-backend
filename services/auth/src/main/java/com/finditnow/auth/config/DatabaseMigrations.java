@@ -8,7 +8,7 @@ public class DatabaseMigrations {
     public static void migrate(DataSource ds) {
         Flyway flyway = Flyway.configure()
                 .dataSource(ds)
-                .locations("filesystem:./db/migrations")
+                .locations("classpath:db/migration")
                 .load();
 
         flyway.migrate();

@@ -34,7 +34,7 @@ public class HTTPServer {
 
         int httpPort = Integer.parseInt(Config.get("AUTH_SERVICE_PORT", "8080"));
 
-        Undertow server = Undertow.builder().addHttpListener(httpPort, "localhost").setHandler(exchange -> {
+        Undertow server = Undertow.builder().addHttpListener(httpPort, Config.get("AUTH_BIND_HOST", "0.0.0.0")).setHandler(exchange -> {
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
 
             try {
