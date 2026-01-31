@@ -1,0 +1,124 @@
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: finditnow-postgres-prod
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./infra/data/data-prod/postgres:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: finditnow-redis-prod
+    restart: unless-stopped
+    volumes:
+      - ./infra/data/data-prod/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  auth:
+    build: ./services/auth
+    container_name: finditnow-auth-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./services/auth/.env
+    expose:
+      - "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  user:
+    build: ./services/user-service
+    container_name: finditnow-user-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./services/user-service/.env
+    expose:
+      - "8081"
+      - "8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  shop:
+    build: ./services/shop-service
+    container_name: finditnow-shop-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./services/shop-service/.env
+    expose:
+      - "8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  order:
+    build: ./services/order-service
+    container_name: finditnow-order-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./services/order-service/.env
+    expose:
+      - "8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  file:
+    build: ./services/file-gateway
+    container_name: finditnow-file-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    expose:
+      - "8090"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:alpine
+    container_name: finditnow-nginx-prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    env_file: .env
+    depends_on:
+      - auth
+      - user
+      - shop
+      - order
+      - file
+    volumes:
+      - ./infra/nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+    command: >
+      sh -c "
+      rm -f /etc/nginx/conf.d/default.conf &&
+      /docker-entrypoint.sh nginx -g 'daemon off;'
+      "

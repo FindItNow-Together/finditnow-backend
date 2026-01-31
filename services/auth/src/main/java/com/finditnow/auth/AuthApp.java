@@ -27,6 +27,13 @@ public class AuthApp {
             String grpcHost = Config.get("USER_SERVICE_GRPC_HOST", "localhost");
             int grpcPort = Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8083"));
 
+            logger.info(
+                    "Resolved gRPC target -> host='{}' (len={}), port={}",
+                    grpcHost,
+                    grpcHost.length(),
+                    grpcPort
+            );
+
             GrpcHealthChecker.waitForGrpcServer(grpcHost, grpcPort, 10, 2000);
 
             DataSource ds = new Database("auth_service").get();
