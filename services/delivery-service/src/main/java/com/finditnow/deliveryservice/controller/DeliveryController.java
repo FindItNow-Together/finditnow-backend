@@ -67,6 +67,15 @@ public class DeliveryController {
         return ResponseEntity.ok(response);
     }
 
+    @PutMapping("/{id}/accept")
+    @PreAuthorize("hasRole('DELIVERY_AGENT')")
+    public ResponseEntity<DeliveryResponse> acceptDelivery(
+            @PathVariable UUID id,
+            @RequestAttribute("userId") String userIdStr) {
+        UUID agentId = UUID.fromString(userIdStr);
+        return ResponseEntity.ok(deliveryService.acceptDelivery(id, agentId));
+    }
+
     @PutMapping("/{id}/complete")
     @PreAuthorize("hasRole('DELIVERY_AGENT')")
     public ResponseEntity<DeliveryResponse> completeDelivery(

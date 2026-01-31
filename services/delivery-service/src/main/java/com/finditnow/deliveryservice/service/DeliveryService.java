@@ -124,14 +124,16 @@ public class DeliveryService {
     /**
      * Updates delivery status.
      *
-     * If a delivery reaches a terminal state:
-     * - DELIVERED
-     * - FAILED
-     * - CANCELLED
-     *
-     * Then:
-     * - Agent capacity is freed
-     * - Best-effort reassignment is attempted
+     * Now syncs ALL status changes to order service, not just terminal states.
+     * Status mapping:
+     * - PENDING_ACCEPTANCE → CONFIRMED
+     * - ASSIGNED → CONFIRMED
+     * - PICKED_UP → PICKED_UP
+     * - IN_TRANSIT → IN_TRANSIT
+     * - DELIVERED → DELIVERED
+     * - FAILED → FAILED (and re-pool delivery)
+     * - CANCELLED → CANCELLED
+     * - CANCELLED_BY_AGENT → CANCELLED
      *
      * Assignment failure MUST NOT roll back the status update.
      */
@@ -144,25 +146,16 @@ public class DeliveryService {
         delivery.setStatus(newStatus);
         deliveryRepository.save(delivery);
 
-        if (newStatus == DeliveryStatus.DELIVERED
-                || newStatus == DeliveryStatus.FAILED
-                || newStatus == DeliveryStatus.CANCELLED) {
+        // Sync status to order service based on delivery status
+        syncOrderStatus(delivery, newStatus);
 
-            if (delivery.getAssignedAgentId() != null) {
-                DeliveryAgent agent = deliveryAgentRepository
-                        .findById(delivery.getAssignedAgentId())
-                        .orElseThrow();
+        // Handle terminal states: free agent and attempt reassignment
+        if (isTerminalState(newStatus)) {
+            freeUpAgent(delivery);
 
-                agent.setStatus(DeliveryAgentStatus.AVAILABLE);
-                agent.setCurrentDeliveryId(null);
-                deliveryAgentRepository.save(agent);
-            }
-
-            // Sync order status for terminal delivery states
-            if (newStatus == DeliveryStatus.DELIVERED) {
-                orderClient.updateOrderStatus(delivery.getOrderId(), "DELIVERED");
-            } else if (newStatus == DeliveryStatus.FAILED || newStatus == DeliveryStatus.CANCELLED) {
-                orderClient.updateOrderStatus(delivery.getOrderId(), "CANCELLED");
+            // Special handling for FAILED status: re-pool the delivery
+            if (newStatus == DeliveryStatus.FAILED) {
+                rePoolFailedDelivery(delivery);
             }
 
             try {
@@ -175,6 +168,119 @@ public class DeliveryService {
         }
 
         return mapToResponse(delivery);
+    }
+
+    /**
+     * Syncs delivery status to order status
+     */
+    private void syncOrderStatus(Delivery delivery, DeliveryStatus deliveryStatus) {
+        String orderStatus;
+
+        switch (deliveryStatus) {
+            case PENDING_ACCEPTANCE:
+            case ASSIGNED:
+                orderStatus = "CONFIRMED";
+                break;
+            case PICKED_UP:
+                orderStatus = "PICKED_UP";
+                break;
+            case IN_TRANSIT:
+                orderStatus = "IN_TRANSIT";
+                break;
+            case DELIVERED:
+                orderStatus = "DELIVERED";
+                break;
+            case FAILED:
+                orderStatus = "FAILED";
+                break;
+            case CANCELLED:
+            case CANCELLED_BY_AGENT:
+                orderStatus = "CANCELLED";
+                break;
+            default:
+                // For CREATED, UNASSIGNED, keep order as CONFIRMED
+                orderStatus = "CONFIRMED";
+                break;
+        }
+
+        try {
+            orderClient.updateOrderStatus(delivery.getOrderId(), orderStatus);
+            log.info("Synced order {} status to {}", delivery.getOrderId(), orderStatus);
+        } catch (Exception e) {
+            log.error("Failed to sync order status for order {}", delivery.getOrderId(), e);
+            // Don't throw - status sync failure shouldn't block delivery updates
+        }
+    }
+
+    /**
+     * Checks if delivery status is terminal (delivery is complete/done)
+     */
+    private boolean isTerminalState(DeliveryStatus status) {
+        return status == DeliveryStatus.DELIVERED
+                || status == DeliveryStatus.FAILED
+                || status == DeliveryStatus.CANCELLED
+                || status == DeliveryStatus.CANCELLED_BY_AGENT;
+    }
+
+    /**
+     * Frees up the assigned agent
+     */
+    private void freeUpAgent(Delivery delivery) {
+        if (delivery.getAssignedAgentId() != null) {
+            DeliveryAgent agent = deliveryAgentRepository
+                    .findById(delivery.getAssignedAgentId())
+                    .orElse(null);
+
+            if (agent != null) {
+                agent.setStatus(DeliveryAgentStatus.AVAILABLE);
+                agent.setCurrentDeliveryId(null);
+                deliveryAgentRepository.save(agent);
+                log.info("Agent {} is now available", agent.getAgentId());
+            }
+        }
+    }
+
+    /**
+     * Re-pools a failed delivery for reassignment
+     */
+    private void rePoolFailedDelivery(Delivery delivery) {
+        log.info("Re-pooling failed delivery {} for reassignment", delivery.getId());
+
+        // Reset delivery to CREATED state and clear agent assignment
+        delivery.setStatus(DeliveryStatus.CREATED);
+        delivery.setAssignedAgentId(null);
+        deliveryRepository.save(delivery);
+
+        log.info("Delivery {} reset to CREATED and ready for reassignment", delivery.getId());
+    }
+
+    /**
+     * Agent explicitly accepts a delivery assigned to them.
+     * Changes status from PENDING_ACCEPTANCE to ASSIGNED.
+     */
+    @Transactional
+    public DeliveryResponse acceptDelivery(UUID deliveryId, UUID agentId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+
+        // Validate agent is assigned to this delivery
+        if (delivery.getAssignedAgentId() == null || !delivery.getAssignedAgentId().equals(agentId)) {
+            throw new RuntimeException("Unauthorized: This delivery is not assigned to you");
+        }
+
+        // Validate delivery is in PENDING_ACCEPTANCE state
+        if (!DeliveryStatus.PENDING_ACCEPTANCE.equals(delivery.getStatus())) {
+            throw new RuntimeException("Invalid state: Delivery must be in PENDING_ACCEPTANCE state");
+        }
+
+        // Agent has accepted, proceed to ASSIGNED status
+        delivery.setStatus(DeliveryStatus.ASSIGNED);
+        Delivery updatedDelivery = deliveryRepository.save(delivery);
+
+        log.info("Agent {} accepted delivery {}", agentId, deliveryId);
+
+        // Order status remains CONFIRMED
+        return mapToResponse(updatedDelivery);
     }
 
     /**
@@ -195,11 +301,24 @@ public class DeliveryService {
             throw new RuntimeException("Invalid state: Delivery must be picked up or in transit before completion");
         }
 
+        // Update status to DELIVERED (this will sync to order via updateStatus)
+        return updateStatus(deliveryId, DeliveryStatus.DELIVERED);
+    }
+
+    /**
+     * Helper method used by old completeDelivery flow - deprecated in favor of
+     * updateStatus
+     */
+    @Deprecated
+    private DeliveryResponse legacyCompleteDelivery(UUID deliveryId, UUID agentId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new RuntimeException("Delivery not found: " + deliveryId));
+
         delivery.setStatus(DeliveryStatus.DELIVERED);
         Delivery updatedDelivery = deliveryRepository.save(delivery);
         log.info("Delivery {} completed by agent {}", deliveryId, agentId);
 
-        // Free up the agent
+        // Free up the agent - OLD WAY
         DeliveryAgent agent = deliveryAgentRepository.findById(agentId)
                 .orElseThrow(() -> new RuntimeException("Agent not found: " + agentId));
         agent.setStatus(DeliveryAgentStatus.AVAILABLE);

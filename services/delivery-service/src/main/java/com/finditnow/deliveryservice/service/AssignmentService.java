@@ -60,13 +60,13 @@ public class AssignmentService {
                 agent.setCurrentDeliveryId(delivery.getId());
 
                 delivery.setAssignedAgentId(agent.getAgentId());
-                delivery.setStatus(DeliveryStatus.ASSIGNED);
+                delivery.setStatus(DeliveryStatus.PENDING_ACCEPTANCE); // Agent must explicitly accept
 
                 deliveryAgentRepository.save(agent);
                 deliveryRepository.save(delivery);
 
                 log.info(
-                                "Assigned delivery {} to agent {}",
+                                "Assigned delivery {} to agent {} (PENDING_ACCEPTANCE)",
                                 delivery.getId(), agent.getAgentId());
         }
 }

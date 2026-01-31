@@ -62,8 +62,11 @@ public class Order {
         CONFIRMED,
         PAID,
         PACKED,
+        PICKED_UP, // Delivery agent picked up from shop
+        IN_TRANSIT, // Delivery agent is traveling to customer
         OUT_FOR_DELIVERY,
         DELIVERED,
+        FAILED, // Delivery failed, will be re-pooled
         CANCELLED
     }
 
