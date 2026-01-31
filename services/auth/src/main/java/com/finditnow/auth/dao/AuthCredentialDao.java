@@ -90,11 +90,11 @@ public class AuthCredentialDao {
 
     public void insert(Connection conn, AuthCredential c) throws SQLException {
         String sql = """
-                INSERT INTO auth_credentials
-                (id, user_id, email, first_name, phone, password_hash, role,
-                 is_email_verified, is_phone_verified, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            """;
+                    INSERT INTO auth_credentials
+                    (id, user_id, email, first_name, phone, password_hash, role,
+                     is_email_verified, is_phone_verified, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, c.getId());
@@ -113,11 +113,11 @@ public class AuthCredentialDao {
 
     public void update(Connection conn, AuthCredential c) throws SQLException {
         String sql = """
-                UPDATE auth_credentials
-                SET email = ?, phone = ?, password_hash = ?, 
-                    is_email_verified = ?, is_phone_verified = ?
-                WHERE id = ?
-            """;
+                    UPDATE auth_credentials
+                    SET email = ?, phone = ?, password_hash = ?, 
+                        is_email_verified = ?, is_phone_verified = ?
+                    WHERE id = ?
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, c.getEmail());

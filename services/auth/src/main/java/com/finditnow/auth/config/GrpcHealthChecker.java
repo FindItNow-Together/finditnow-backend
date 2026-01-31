@@ -10,7 +10,9 @@ import java.util.concurrent.TimeUnit;
 
 public class GrpcHealthChecker {
     private static final Logger logger = LoggerFactory.getLogger(GrpcHealthChecker.class);
-    private GrpcHealthChecker() {}
+
+    private GrpcHealthChecker() {
+    }
 
     public static void waitForGrpcServer(
             String host,

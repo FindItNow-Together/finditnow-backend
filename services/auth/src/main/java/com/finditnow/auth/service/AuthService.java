@@ -73,7 +73,8 @@ public class AuthService {
                 UUID userId = UUID.randomUUID();
                 String pwHash = PasswordUtil.hash(signUpReq.getPassword());
 
-                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(),
+                        pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
                 cred.setFirstName(signUpReq.getFirstName());
 
                 authDao.credDao.insert(conn, cred);

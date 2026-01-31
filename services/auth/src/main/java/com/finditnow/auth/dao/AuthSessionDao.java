@@ -66,11 +66,11 @@ public class AuthSessionDao {
 
     public void insert(Connection conn, AuthSession s) throws SQLException {
         String sql = """
-                INSERT INTO auth_sessions
-                (id, cred_id, session_token, session_method, ip_address, user_agent, 
-                 expires_at, is_valid, created_at, revoked_at)
-                VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, NOW(), ?)
-            """;
+                    INSERT INTO auth_sessions
+                    (id, cred_id, session_token, session_method, ip_address, user_agent, 
+                     expires_at, is_valid, created_at, revoked_at)
+                    VALUES (?, ?, ?, ?, ?::inet, ?, ?, ?, NOW(), ?)
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, s.getId());
@@ -89,8 +89,8 @@ public class AuthSessionDao {
 
     public void update(Connection conn, AuthSession s) throws SQLException {
         String sql = """
-                UPDATE auth_sessions SET expires_at = ?, is_valid = ?, revoked_at = ? WHERE id = ?
-            """;
+                    UPDATE auth_sessions SET expires_at = ?, is_valid = ?, revoked_at = ? WHERE id = ?
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, s.getExpiresAt());
@@ -110,10 +110,10 @@ public class AuthSessionDao {
         }
 
         String sql = """
-                UPDATE auth_sessions
-                SET is_valid = FALSE, revoked_at = NOW()
-                WHERE id = ?
-            """;
+                    UPDATE auth_sessions
+                    SET is_valid = FALSE, revoked_at = NOW()
+                    WHERE id = ?
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, id);
@@ -124,10 +124,10 @@ public class AuthSessionDao {
 
     public void invalidateByToken(Connection conn, String token) throws SQLException {
         String sql = """
-                UPDATE auth_sessions
-                SET is_valid = FALSE, revoked_at = NOW()
-                WHERE session_token = ?
-            """;
+                    UPDATE auth_sessions
+                    SET is_valid = FALSE, revoked_at = NOW()
+                    WHERE session_token = ?
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, token);

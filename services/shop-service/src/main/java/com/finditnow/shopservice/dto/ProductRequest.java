@@ -15,5 +15,9 @@ public class ProductRequest {
     private String category;
 
     private String imageUrl;
+
+    private Float price;
+
+    private Integer stock;
 }
 

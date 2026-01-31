@@ -2,6 +2,7 @@ package com.finditnow.auth.server;
 
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
+import com.finditnow.auth.controller.ServiceTokenController;
 import com.finditnow.auth.handlers.JwtAuthHandler;
 import com.finditnow.auth.handlers.RequestLoggingHandler;
 import com.finditnow.auth.handlers.Routes;
@@ -19,8 +20,8 @@ import java.util.Set;
 public class HTTPServer {
     private static final Logger logger = LoggerFactory.getLogger(HTTPServer.class);
 
-    public HTTPServer(AuthController authController, OauthController oauthController, JwtService jwtService) {
-        RoutingHandler routes = Routes.build(authController, oauthController);
+    public HTTPServer(AuthController authController, OauthController oauthController, ServiceTokenController serviceTokenController, JwtService jwtService) {
+        RoutingHandler routes = Routes.build(authController, oauthController, serviceTokenController);
 
         Set<String> privateRoutes = Set.of(
                 "/updatepassword",
@@ -41,7 +42,7 @@ public class HTTPServer {
                 root.handleRequest(exchange);
             } catch (Exception ex) {
                 logger.error("Error occurred during {}, Message: {}", exchange.getRequestPath(), ex.getMessage());
-                if(!exchange.isResponseStarted()){
+                if (!exchange.isResponseStarted()) {
                     exchange.setStatusCode(500);
                     exchange.getResponseSender().send("{\"error\": \"Internal Server Error\"}");
                 }

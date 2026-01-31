@@ -51,10 +51,10 @@ public class AuthOauthGoogleDao {
 
     public void insert(Connection conn, AuthOauthGoogle o) throws SQLException {
         String sql = """
-                INSERT INTO auth_oauth_google
-                (id, user_id, google_user_id, email, created_at)
-                VALUES (?, ?, ?, ?, NOW())
-            """;
+                    INSERT INTO auth_oauth_google
+                    (id, user_id, google_user_id, email, created_at)
+                    VALUES (?, ?, ?, ?, NOW())
+                """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setObject(1, o.getId());
