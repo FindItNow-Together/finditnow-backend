@@ -16,6 +16,7 @@ import java.util.Map;
 public class JwtService {
     private final SecretKey key;
     private final long accessTokenMillis = 60 * 60 * 1000L; // 15 min
+    private final long serviceTokenMillis = 60 * 1000L; //60 seconds
 
     public JwtService() {
         String secret = Config.get("JWT_SECRET", "VERY_LONG_unimaginable_SECRET111");
@@ -34,6 +35,21 @@ public class JwtService {
                 .signWith(key)
                 .compact();
     }
+
+    public String generateServiceToken(String serviceName, String audience) {
+        long now = System.currentTimeMillis();
+
+        return Jwts.builder()
+                .issuer("auth-service")
+                .subject("service:" + serviceName)
+                .claim("aud", audience)
+                .claim("typ", "service")
+                .issuedAt(new Date(now))
+                .expiration(new Date(now + serviceTokenMillis)) // 30–120s
+                .signWith(key)
+                .compact();
+    }
+
 
     /**
      * Validate a token with blacklist checking. This method can be used by other microservices.
@@ -91,6 +107,11 @@ public class JwtService {
         Jws<Claims> claims = parseClaims(token);
 
         return claims.getPayload().getExpiration().before(new Date());
+    }
+
+    public boolean isServiceToken(String token) {
+        Jws<Claims> claims = parseClaims(token);
+        return "service".equals(claims.getPayload().get("typ", String.class));
     }
 
     /**

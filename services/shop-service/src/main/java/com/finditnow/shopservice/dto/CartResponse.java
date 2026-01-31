@@ -1,0 +1,27 @@
+package com.finditnow.shopservice.dto;
+
+import com.finditnow.shopservice.entity.CartStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.UUID;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class CartResponse {
+
+    private UUID cartId;
+    private UUID userId;
+    private Long shopId;
+    private CartStatus status;
+    private List<CartItemResponse> items;
+    private Integer totalItems;
+
+    // Calculated fields for checkout (NEW FIELD)
+    private Float subtotal;  // Sum of all item subtotals
+}

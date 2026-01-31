@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -37,41 +36,44 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // Public endpoints - search and categories
+                        .requestMatchers(
+                                "/search/**",
+                                "/categories/**",
+                                "/api/search/**",
+                                "/api/categories/**",
+                                "/api/shops/search"
+                        ).permitAll()
 
-                        // User management endpoints (ADMIN only)
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        // Allow public READ access to shops, products, and inventory
+                        .requestMatchers("GET", "/shop/**", "/api/shop/**").permitAll()
+                        .requestMatchers("GET", "/product/**", "/api/product/**").permitAll()
 
-                        // Shop endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shops").hasRole("ADMIN") // Get all shops (ADMIN only)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shops").hasAnyRole("SHOP", "ADMIN") // Create shop
-                                                                                                       // (SHOP/ADMIN)
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shops/{id}").permitAll() // Get shop details (Public)
-                        .requestMatchers("/api/v1/shops/**").hasAnyRole("SHOP", "ADMIN") // All other shop endpoints
+                        // Require authentication for CREATE/UPDATE/DELETE operations
+                        .requestMatchers("POST", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("PUT", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("DELETE", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("POST", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("PUT", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+                        .requestMatchers("DELETE", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
 
-                        // Product endpoints
-                        .requestMatchers("/api/v1/products/**").hasAnyRole("SHOP", "ADMIN")
-
-                        // All other requests must be authenticated
-                        .anyRequest().permitAll())
+                        // All other requests require authentication
+                        .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // @Bean
-    // public CorsConfigurationSource corsConfigurationSource() {
-    // CorsConfiguration configuration = new CorsConfiguration();
-    // configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-    // configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE",
-    // "OPTIONS"));
-    // configuration.setAllowedHeaders(Arrays.asList("*"));
-    // configuration.setAllowCredentials(true);
-    //
-    // UrlBasedCorsConfigurationSource source = new
-    // UrlBasedCorsConfigurationSource();
-    // source.registerCorsConfiguration("/**", configuration);
-    // return source;
-    // }
+//    @Bean
+//    public CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration configuration = new CorsConfiguration();
+//        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+//        configuration.setAllowedHeaders(Arrays.asList("*"));
+//        configuration.setAllowCredentials(true);
+//
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", configuration);
+//        return source;
+//    }
 }

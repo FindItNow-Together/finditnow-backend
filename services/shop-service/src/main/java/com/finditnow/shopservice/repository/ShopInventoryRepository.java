@@ -15,4 +15,10 @@ public interface ShopInventoryRepository extends JpaRepository<ShopInventory, Lo
 
     @Query("SELECT inv FROM ShopInventory inv WHERE inv.shop.id = :shopId AND lower(inv.product.name) LIKE lower(concat('%', :prodName, '%'))")
     List<ShopInventory> searchByProductNameAndShopId(@Param("prodName") String prodName, @Param("shopId") Long shopId);
+
+    @Query("SELECT inv FROM ShopInventory inv WHERE inv.product.id = :productId")
+    List<ShopInventory> findByProductId(@Param("productId") Long productId);
+
+    @Query("SELECT inv FROM ShopInventory inv WHERE inv.product.id = :productId AND inv.shop.ownerId = :ownerId")
+    List<ShopInventory> findByProductIdAndOwnerId(@Param("productId") Long productId, @Param("ownerId") java.util.UUID ownerId);
 }

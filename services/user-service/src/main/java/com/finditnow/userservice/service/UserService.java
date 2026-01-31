@@ -1,6 +1,9 @@
 package com.finditnow.userservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.finditnow.interservice.InterServiceClient;
 import com.finditnow.userservice.dao.UserDao;
+import com.finditnow.userservice.dto.CreateDeliveryAgentRequest;
 import com.finditnow.userservice.dto.PagedResponse;
 import com.finditnow.userservice.dto.UserDto;
 import com.finditnow.userservice.entity.User;
@@ -8,6 +11,7 @@ import com.finditnow.userservice.exception.DuplicateResourceException;
 import com.finditnow.userservice.exception.ResourceNotFoundException;
 import com.finditnow.userservice.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -18,11 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
     private final UserDao userDao;
     private final UserMapper userMapper;
+    private static final ObjectMapper objMapper = new ObjectMapper();
 
     @Transactional
     public UserDto createUser(UserDto userDto) {
@@ -43,6 +49,7 @@ public class UserService {
         user.setCreatedAt(Instant.now());
 
         User savedUser = userDao.save(user);
+
         return userMapper.toDto(savedUser);
     }
 
