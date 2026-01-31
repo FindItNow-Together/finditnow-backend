@@ -26,15 +26,25 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         this.redis = redis;
     }
 
+    // ✅ CRITICAL: Skip Swagger & public APIs
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/auth");
+    }
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+
         String token = extractToken(request);
 
         if (token == null || redis.isAccessTokenBlacklisted(token)) {
-            System.out.print("AUTHENTICATION INVALID TOKEN");
-            if (token != null) {
-                System.out.println(" >>>> " + token);
-            }
             filterChain.doFilter(request, response);
             return;
         }
@@ -42,25 +52,30 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             Map<String, String> userInfo = jwt.parseTokenToUser(token);
 
-            // Attach identity to request context
-            request.setAttribute("userId", UUID.fromString(userInfo.get("userId")));
-            request.setAttribute("profile", userInfo.get("profile"));
+            request.setAttribute("userId",
+                    UUID.fromString(userInfo.get("userId")));
+            request.setAttribute("profile",
+                    userInfo.get("profile"));
 
             filterChain.doFilter(request, response);
+
         } catch (JwtExpiredException e) {
             sendUnauthorized(response, "token_expired");
-        } catch (ServletException e) {
-            sendUnauthorized(response, "unauthorized");
         }
     }
 
     private String extractToken(HttpServletRequest req) {
         String header = req.getHeader("Authorization");
-        if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) return null;
+        if (!StringUtils.hasText(header) || !header.startsWith("Bearer ")) {
+            return null;
+        }
         return header.substring(7);
     }
 
-    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
+    private void sendUnauthorized(
+            HttpServletResponse response,
+            String message
+    ) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
