@@ -201,6 +201,41 @@ public class CartServiceImpl implements CartService {
         }
 
         // Release reserved stock for all items
+        releaseCartItemsStock(cartId, cart);
+    }
+
+    @Override
+    @Transactional
+    public void consumeCart(UUID cartId) {
+        Cart cart = cartRepository.findByIdWithDetails(cartId)
+                .orElseThrow(() -> new CartNotFoundException("Cart not found"));
+
+        if (cart.getStatus() != CartStatus.ACTIVE) {
+            throw new BadRequestException("Cart is not active");
+        }
+
+        for (CartItem item : cart.getItems()) {
+            ShopInventory inventory = item.getShopInventory();
+            int qty = item.getQuantity();
+
+            inventory.setReservedStock(inventory.getReservedStock() - qty);
+            inventory.setStock(inventory.getStock() - qty);
+
+            if (inventory.getStock() < 0) {
+                throw new IllegalStateException("Stock underflow for inventory " + inventory.getId());
+            }
+
+            shopInventoryRepository.save(inventory);
+        }
+
+        cartItemRepository.deleteAllByCartId(cartId);
+        cart.getItems().clear();
+        cart.setStatus(CartStatus.CONVERTED);
+
+        cartRepository.save(cart);
+    }
+
+    private void releaseCartItemsStock(UUID cartId, Cart cart) {
         for (CartItem item : cart.getItems()) {
             ShopInventory inventory = item.getShopInventory();
             inventory.setReservedStock(inventory.getReservedStock() - item.getQuantity());
@@ -255,6 +290,15 @@ public class CartServiceImpl implements CartService {
         int payable = itemsTotal + tax + deliveryFee;
 
         return new CartPricingResponse(deliveryFee, tax, payable);
+    }
+
+    @Override
+    public CartResponse getCartById(UUID cartId) {
+        Cart cart = cartRepository.findByIdWithDetails(cartId)
+                .orElseThrow(() -> new CartNotFoundException(
+                        "Cart not found with id: " + cartId));
+
+        return cartMapper.toCartResponse(cart);
     }
 
     private Cart getCartByIdAndUser(UUID cartId, UUID userId) {

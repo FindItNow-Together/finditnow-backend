@@ -2,6 +2,7 @@ package com.finditnow.orderservice.controllers;
 
 import com.finditnow.orderservice.dtos.CreateOrderFromCartRequest;
 import com.finditnow.orderservice.dtos.OrderResponse;
+import com.finditnow.orderservice.dtos.StatusUpdateRequest;
 import com.finditnow.orderservice.services.OrderService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +22,7 @@ public class OrderController {
     @PostMapping("/from-cart")
     public ResponseEntity<OrderResponse> createOrderFromCart(
             @RequestBody CreateOrderFromCartRequest request,
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.createOrderFromCart(request, userId);
         return ResponseEntity.ok(order);
@@ -31,8 +31,7 @@ public class OrderController {
     @GetMapping("/{orderId}")
     public ResponseEntity<OrderResponse> getOrder(
             @PathVariable UUID orderId,
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         OrderResponse order = orderService.getOrder(orderId, userId);
         return ResponseEntity.ok(order);
@@ -40,10 +39,24 @@ public class OrderController {
 
     @GetMapping("/mine")
     public ResponseEntity<List<OrderResponse>> getUserOrders(
-            @RequestAttribute("userId") String userIdStr
-    ) {
+            @RequestAttribute("userId") String userIdStr) {
         UUID userId = UUID.fromString(userIdStr);
         List<OrderResponse> orders = orderService.getUserOrders(userId);
         return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping("/quote")
+    public ResponseEntity<com.finditnow.orderservice.dtos.DeliveryQuoteResponse> getQuote(
+            @RequestParam Long shopId,
+            @RequestParam UUID addressId) {
+        return ResponseEntity.ok(orderService.getDeliveryQuote(shopId, addressId));
+    }
+
+    @PutMapping("/{orderId}/status")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable UUID orderId,
+            @RequestBody StatusUpdateRequest request) {
+        OrderResponse order = orderService.updateOrderStatus(orderId, request.getStatus());
+        return ResponseEntity.ok(order);
     }
 }
