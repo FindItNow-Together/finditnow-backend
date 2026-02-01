@@ -164,9 +164,14 @@ public class SearchService {
             shops = shops.subList(0, shopLimit);
         }
 
+<<<<<<< HEAD
         // Search products
         PagedResponse<SearchOpportunityResponse> productResults =
                 searchProducts(query, lat, lng, "BOTH", 0, productLimit);
+=======
+        // Search products (using existing method)
+        PagedResponse<SearchOpportunityResponse> productResults = searchProducts(query, lat, lng, "BOTH", 0, productLimit, null);
+>>>>>>> 6135645c22bc8a8cf17e5a13d326463440e668cd
 
         return GlobalSearchResponse.builder()
                 .shops(shops)
