@@ -36,6 +36,17 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.getDeliveryByOrderId(orderId));
     }
 
+    /**
+     * Cancel delivery by order ID (internal: called by order-service when customer cancels order).
+     * Requires SERVICE role (service token).
+     */
+    @PutMapping("/order/{orderId}/cancel")
+    @PreAuthorize("hasRole('SERVICE')")
+    public ResponseEntity<?> cancelDeliveryByOrderId(@PathVariable UUID orderId) {
+        DeliveryResponse response = deliveryService.cancelByOrderId(orderId);
+        return response != null ? ResponseEntity.ok(response) : ResponseEntity.ok().build();
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('DELIVERY_AGENT', 'ADMIN')")
     public ResponseEntity<DeliveryResponse> updateStatus(
