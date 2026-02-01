@@ -8,7 +8,7 @@ import org.springframework.context.annotation.ComponentScan;
 @SpringBootApplication
 public class DeliveryServiceApplication {
     public static void main(String[] args) {
-        Database.setEnv("delivery_db");
+        Database.setEnv("delivery_service");
         SpringApplication.run(DeliveryServiceApplication.class, args);
     }
 }

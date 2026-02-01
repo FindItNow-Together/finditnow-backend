@@ -90,12 +90,29 @@ services:
       redis:
         condition: service_healthy
 
+  delivery:
+    build: ./services/delivery-service
+    container_name: finditnow-delivery-prod
+    restart: unless-stopped
+    env_file:
+      - .env
+      - ./services/delivery-service/.env
+    expose:
+      - "8086"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   file:
     build: ./services/file-gateway
     container_name: finditnow-file-prod
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - ./infra/data/file-uploads:/app/data/uploads
     expose:
       - "8090"
     depends_on:
@@ -114,6 +131,7 @@ services:
       - user
       - shop
       - order
+      - delivery
       - file
     volumes:
       - ./infra/nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.conf.template:ro
