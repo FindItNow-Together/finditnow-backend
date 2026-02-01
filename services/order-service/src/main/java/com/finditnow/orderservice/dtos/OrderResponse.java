@@ -17,4 +17,11 @@ public class OrderResponse {
     private UUID deliveryAddressId;
     private String createdAt;
     private List<OrderItemResponse> items;
+
+    /** Set when order is cancelled: CUSTOMER or DELIVERY_AGENT */
+    private String cancelledBy;
+    /** Set when order is cancelled */
+    private String cancellationReason;
+    /** Set when order is cancelled */
+    private String cancelledAt;
 }

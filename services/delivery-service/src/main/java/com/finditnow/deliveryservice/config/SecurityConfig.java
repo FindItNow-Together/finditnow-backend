@@ -29,6 +29,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.PUT, "/deliveries/order/*/cancel").hasRole("SERVICE")
                         .requestMatchers("/deliveries/mine").hasRole("DELIVERY_AGENT")
                         .requestMatchers("/{id}/status").hasAnyRole("DELIVERY_AGENT", "ADMIN")
                         .anyRequest().permitAll())

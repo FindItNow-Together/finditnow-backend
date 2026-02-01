@@ -51,6 +51,16 @@ public class Order {
     @Column(updatable = false)
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_by")
+    private CancelledBy cancelledBy;
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
@@ -79,6 +89,12 @@ public class Order {
         PENDING,
         PAID,
         PARTIALLY_PAID,
-        FAILED
+        FAILED,
+        REFUND_PENDING
+    }
+
+    public enum CancelledBy {
+        CUSTOMER,
+        DELIVERY_AGENT
     }
 }
