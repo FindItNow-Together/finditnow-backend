@@ -10,6 +10,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import java.util.List;
+
 
 import java.io.IOException;
 import java.util.Map;
@@ -52,16 +57,29 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         try {
             Map<String, String> userInfo = jwt.parseTokenToUser(token);
 
-            request.setAttribute("userId",
-                    UUID.fromString(userInfo.get("userId")));
-            request.setAttribute("profile",
-                    userInfo.get("profile"));
+            UUID userId = UUID.fromString(userInfo.get("userId"));
+            String profile = userInfo.get("profile");
+
+            // ✅ REQUIRED: put user in Spring Security context
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            userId.toString(),     // principal
+                            null,                  // credentials
+                            List.of(new SimpleGrantedAuthority("ROLE_" + profile))
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            // Optional (for controller access)
+            request.setAttribute("userId", userId);
+            request.setAttribute("profile", profile);
 
             filterChain.doFilter(request, response);
 
         } catch (JwtExpiredException e) {
             sendUnauthorized(response, "token_expired");
         }
+
     }
 
     private String extractToken(HttpServletRequest req) {

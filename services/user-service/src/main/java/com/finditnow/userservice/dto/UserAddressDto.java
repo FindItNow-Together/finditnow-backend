@@ -45,11 +45,11 @@ public class UserAddressDto {
     @NotNull(message = "Address type is required")
     private AddressType addressType;
 
-    private double latitude;
-    private double longitude;
+    private Double latitude;
+    private Double longitude;
 
     @JsonProperty("isPrimary")
-    private boolean isPrimary;
+    private Boolean isPrimary;
 
     private String fullAddress;
     private UUID userId;

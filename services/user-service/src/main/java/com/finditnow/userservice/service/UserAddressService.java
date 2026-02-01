@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+
 @Service
 @RequiredArgsConstructor
 public class UserAddressService {
@@ -85,23 +86,24 @@ public class UserAddressService {
     }
 
     @Transactional
-    public UserAddressDto updateAddress(UUID id, UserAddressDto addressDto) {
-        UserAddress existingAddress = userAddressDao.findById(id).orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + id));
+    public UserAddressDto updateAddress(UUID id, UserAddressDto dto) {
 
-        UUID userId = existingAddress.getUser().getId();
+        UserAddress address = userAddressDao.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + id));
 
-        // Handle primary address logic
-        if (addressDto.isPrimary() && !existingAddress.isPrimary()) {
-            clearPrimaryAddressForUser(userId);
-        }
+        if (dto.getLine1() != null) address.setLine1(dto.getLine1());
+        if (dto.getLine2() != null) address.setLine2(dto.getLine2());
+        if (dto.getCity() != null) address.setCity(dto.getCity());
+        if (dto.getState() != null) address.setState(dto.getState());
+        if (dto.getCountry() != null) address.setCountry(dto.getCountry());
+        if (dto.getPostalCode() != null) address.setPostalCode(dto.getPostalCode());
+        if (dto.getAddressType() != null) address.setAddressType(dto.getAddressType());
+        if (dto.getLatitude() != null) address.setLatitude(dto.getLatitude());
+        if (dto.getLongitude() != null) address.setLongitude(dto.getLongitude());
+        if (dto.getFullAddress() != null) address.setFullAddress(dto.getFullAddress());
 
-        userAddressMapper.updateEntityFromDto(addressDto, existingAddress);
-        existingAddress.setFullAddress(buildFullAddress(existingAddress));
-
-        UserAddress updatedAddress = userAddressDao.save(existingAddress);
-        return userAddressMapper.toDto(updatedAddress);
+        return userAddressMapper.toDto(address);
     }
-
     @Transactional
     public void deleteAddress(UUID id) {
         UserAddress address = userAddressDao.findById(id).orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + id));

@@ -76,11 +76,13 @@ public class UserAddressController {
     public ResponseEntity<ApiResponse<UserAddressDto>> updateAddress(
             @PathVariable UUID id,
             @Valid @RequestBody UserAddressDto addressDto) {
-        UserAddressDto updatedAddress = userAddressService.updateAddress(id, addressDto);
+
+        UserAddressDto updated = userAddressService.updateAddress(id, addressDto);
+
         return ResponseEntity.ok(ApiResponse.<UserAddressDto>builder()
                 .success(true)
                 .message("Address updated successfully")
-                .data(updatedAddress)
+                .data(updated)
                 .build());
     }
 
