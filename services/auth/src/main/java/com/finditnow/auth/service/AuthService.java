@@ -73,7 +73,8 @@ public class AuthService {
                 UUID userId = UUID.randomUUID();
                 String pwHash = PasswordUtil.hash(signUpReq.getPassword());
 
-                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(),
+                        pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
                 cred.setFirstName(signUpReq.getFirstName());
 
                 authDao.credDao.insert(conn, cred);
@@ -581,7 +582,7 @@ public class AuthService {
         }
 
         //recheck session for phantom cache entry
-        var updatedSession = transactionManager.executeInTransaction(conn -> {
+        var updatedSession =  transactionManager.executeInTransaction(conn -> {
             Optional<AuthSession> dbSession = authDao.sessionDao.findBySessionToken(conn, refreshToken);
 
             //phantom cache entry check
@@ -601,7 +602,7 @@ public class AuthService {
             return finalDbSession;
         });
 
-        if (updatedSession == null) {
+        if(updatedSession == null) {
             redis.deleteRefreshToken(refreshToken);
             data.put("error", "invalid_refresh");
             return new AuthResponse(401, data);

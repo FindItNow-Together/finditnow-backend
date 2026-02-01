@@ -2,6 +2,7 @@ package com.finditnow.auth.handlers;
 
 import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
+import com.finditnow.auth.controller.ServiceTokenController;
 import io.undertow.server.RoutingHandler;
 
 /**
@@ -17,8 +18,8 @@ public final class Routes {
      */
     public static RoutingHandler build(
             AuthController auth,
-            OauthController oauth
-    ) {
+            OauthController oauth,
+            ServiceTokenController serviceTokenController) {
         return new RoutingHandler()
                 .post("/signin", auth::signIn)
                 .post("/signup", auth::signUp)
@@ -34,6 +35,9 @@ public final class Routes {
 
                 .get("/oauth/google", oauth::redirectToGoogle)
                 .get("/oauth/google/callback", oauth::authorizeGoogleResponse)
+
+                // -------- internal --------
+                .post("/internal/service-token", serviceTokenController::handle)
 
                 .get("/health", exchange -> {
                     exchange.setStatusCode(200);

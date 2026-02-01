@@ -24,6 +24,7 @@ dependencies {
     implementation(project(":libs:jwt"))
     implementation(project(":libs:redis"))
     implementation(project(":libs:proto"))//grpc
+    implementation(project(":libs:interservice-caller"))
 
     implementation("org.postgresql:postgresql:42.7.8")
     implementation("org.springframework.boot:spring-boot-starter-web")

@@ -53,9 +53,17 @@ public interface CartService {
     void clearCart(UUID userId, UUID cartId);
 
     /**
+     * Consume all items from a cart after order for internal use(inter service calling)
+     * @param cartId The cart ID to clear
+     */
+    void consumeCart(UUID cartId);
+
+    /**
      * Mark a cart as converted (to order)
      */
     void markCartAsConverted(UUID cartId);
 
     CartPricingResponse calculatePricing(UUID userId, UUID cartId);
+
+    CartResponse getCartById(UUID cartId);
 }

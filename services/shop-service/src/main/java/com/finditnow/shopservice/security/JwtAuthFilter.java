@@ -4,11 +4,15 @@ import com.finditnow.jwt.JwtService;
 import com.finditnow.jwt.exceptions.JwtExpiredException;
 import com.finditnow.jwt.exceptions.JwtValidationException;
 import com.finditnow.redis.RedisStore;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -47,22 +51,37 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
         }
 
         try {
-            Map<String, String> userInfo = jwt.parseTokenToUser(token);
-            String userId = userInfo.get("userId");
-            String profile = userInfo.get("profile");
+            UsernamePasswordAuthenticationToken authentication;
+            Jws<Claims> claims = jwt.parseClaims(token);
+            if("service".equals(claims.getPayload().get("typ", String.class))) {
 
-            List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + profile.toUpperCase()));
+                List<GrantedAuthority> authorities =
+                        List.of(new SimpleGrantedAuthority("ROLE_SERVICE"));
 
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(userId, null, authorities);
+                authentication = new UsernamePasswordAuthenticationToken(
+                        claims.getPayload().getSubject(), // service name
+                        null,
+                        authorities
+                );
+            }else{
+                String userId = claims.getPayload().get("userId", String.class);
+                String profile = claims.getPayload().get("profile", String.class);
+
+                List<GrantedAuthority> authorities =
+                        List.of(new SimpleGrantedAuthority("ROLE_" + profile.toUpperCase()));
+
+                authentication = new UsernamePasswordAuthenticationToken(
+                        userId,
+                        null,
+                        authorities
+                );
+            }
 
             // 2. Set additional request details
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
-            // Optional: Continue using attributes if needed for controllers
-            request.setAttribute("userId", userId);
-            request.setAttribute("profile", profile);
             filterChain.doFilter(request, response);
 
         } catch (JwtExpiredException e) {
