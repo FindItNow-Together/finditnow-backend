@@ -58,6 +58,9 @@ public class Shop {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    @Column(name = "image_url")
+    private String imageUrl;
+
     public void addProduct(Product product, int stock, Float price) {
         boolean exists = shopInventory.stream().anyMatch(i -> i.getProduct().equals(product));
 
