@@ -129,6 +129,8 @@ public class AuthController extends BaseController {
         sendResponse(exchange, response.statusCode(), response.data());
     }
 
+
+
     public void updatePassword(HttpServerExchange exchange) throws Exception {
         Map<String, String> bodyMap = getRequestBody(exchange);
         String newPassword = bodyMap.get("newPassword");
@@ -137,13 +139,13 @@ public class AuthController extends BaseController {
             sendError(exchange, 400, "password_required");
             return;
         }
-
         Map<String, String> authInfo = exchange.getAttachment(JwtAuthHandler.SESSION_INFO);
         String credId = authInfo.get("credId");
 
         AuthResponse response = authService.updatePassword(credId, newPassword);
         sendResponse(exchange, response.statusCode(), response.data());
     }
+
 
     public void updateRole(HttpServerExchange exchange) throws Exception {
         Map<String, String> bodyMap = getRequestBody(exchange);

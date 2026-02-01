@@ -17,7 +17,9 @@ public class PasswordUtil {
      * @return returns the boolean checking the regex for password
      */
     public static boolean checkPwdString(String plainPwd) {
-        return plainPwd.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}$\n");
+        return plainPwd != null &&
+                plainPwd.matches("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}$");
     }
+
 }
 

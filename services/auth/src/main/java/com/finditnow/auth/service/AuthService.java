@@ -518,8 +518,24 @@ public class AuthService {
     public AuthResponse updatePassword(String credId, String newPassword) {
         Map<String, String> data = new HashMap<>();
 
+        // 1️⃣ Auth safety
+        if (credId == null || credId.isBlank()) {
+            data.put("error", "unauthorized");
+            return new AuthResponse(401, data);
+        }
+
+        // 2️⃣ Input validation
+        if (newPassword == null || newPassword.isBlank()) {
+            data.put("error", "newPassword is required");
+            return new AuthResponse(400, data);
+        }
+
+        // 3️⃣ Password policy
         if (!PasswordUtil.checkPwdString(newPassword)) {
-            data.put("error", "password not in desired format");
+            data.put(
+                    "error",
+                    "Password must contain uppercase, lowercase, number, special character and be at least 8 characters long"
+            );
             return new AuthResponse(400, data);
         }
 
@@ -528,17 +544,27 @@ public class AuthService {
                 Map<String, Object> updateFields = new HashMap<>();
                 updateFields.put("password_hash", PasswordUtil.hash(newPassword));
 
-                authDao.credDao.updateCredFieldsById(conn, UUID.fromString(credId), updateFields);
+                authDao.credDao.updateCredFieldsById(
+                        conn,
+                        UUID.fromString(credId),
+                        updateFields
+                );
 
-                data.put("message", "password updated");
+                data.put("message", "password updated successfully");
                 return new AuthResponse(200, data);
             });
+
+        } catch (IllegalArgumentException e) {
+            data.put("error", "invalid credential id");
+            return new AuthResponse(400, data);
+
         } catch (Exception e) {
-            logger.error(e.getMessage());
+            logger.error("updatePassword failed", e);
             data.put("error", "internal server error");
             return new AuthResponse(500, data);
         }
     }
+
 
     public AuthResponse logout(String accessToken, String refreshToken) {
         Map<String, String> data = new HashMap<>();

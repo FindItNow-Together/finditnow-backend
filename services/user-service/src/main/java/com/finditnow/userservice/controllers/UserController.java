@@ -65,19 +65,5 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.<Void>builder().success(true).message("User deleted successfully").build());
     }
 
-    @PutMapping("/update")
-    public ResponseEntity<ApiResponse<UserDto>> updateMe(
-            @RequestAttribute("userId") UUID userId,
-            @Valid @RequestBody UserDto userDto
-    ) {
-        UserDto updatedUser = userService.updateUser(userId, userDto);
-        return ResponseEntity.ok(
-                ApiResponse.<UserDto>builder()
-                        .success(true)
-                        .message("Profile updated successfully")
-                        .data(updatedUser)
-                        .build()
-        );
-    }
 
 }
