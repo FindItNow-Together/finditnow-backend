@@ -20,7 +20,7 @@ public class SearchController {
     }
 
     @GetMapping("/products")
-    public ApiResponse<PagedResponse<SearchOpportunityResponse>> searchProducts(@RequestParam String q,
+    public ApiResponse<PagedResponse<SearchOpportunityResponse>> searchProducts(@RequestParam(required = false) String q,
             @RequestParam(required = false) Double lat, @RequestParam(required = false) Double lng,
             @RequestParam(defaultValue = "BOTH") String fulfillment, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size, @RequestParam(required = false) Long shopId) {
@@ -30,7 +30,7 @@ public class SearchController {
 
     @GetMapping("/global")
     public ApiResponse<GlobalSearchResponse> globalSearch(
-            @RequestParam String q,
+            @RequestParam(required = false) String q,
             @RequestParam(required = false) Double lat,
             @RequestParam(required = false) Double lng,
             @RequestParam(defaultValue = "5") int shopLimit,

@@ -11,7 +11,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -20,12 +19,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @Component
-public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
+public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwt;
     private final RedisStore redis;
@@ -46,7 +43,8 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
         }
 
         if (redis.isAccessTokenBlacklisted(token)) {
-            sendUnauthorized(response, "token_revoked");
+            SecurityContextHolder.clearContext();
+            filterChain.doFilter(request, response);
             return;
         }
 
@@ -59,7 +57,7 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
                         List.of(new SimpleGrantedAuthority("ROLE_SERVICE"));
 
                 authentication = new UsernamePasswordAuthenticationToken(
-                        claims.getPayload().getSubject(), // service name
+                        claims.getPayload().getSubject(),
                         null,
                         authorities
                 );
@@ -77,19 +75,14 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
                 );
             }
 
-            // 2. Set additional request details
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             filterChain.doFilter(request, response);
 
-        } catch (JwtExpiredException e) {
-            SecurityContextHolder.clearContext();
-            sendUnauthorized(response, "token_expired");
         } catch (JwtValidationException e) {
             SecurityContextHolder.clearContext();
-            sendUnauthorized(response, "token_invalid");
+            filterChain.doFilter(request, response);
         }
     }
 
@@ -97,18 +90,5 @@ public class JwtAuthFilter extends OncePerRequestFilter { // Ensure 'extends'
         String header = req.getHeader("Authorization");
         if (header == null || !header.startsWith("Bearer ")) return null;
         return header.substring(7);
-    }
-
-    private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
-
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json");
-
-        response.getWriter().write("""
-                {
-                  "success": false,
-                  "error": "%s"
-                }
-                """.formatted(message));
     }
 }

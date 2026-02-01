@@ -16,14 +16,14 @@ public class SearchService {
     private final ShopInventoryService shopInventoryService;
 
     public SearchService(ProductService productService, ShopService shopService,
-            ShopInventoryService shopInventoryService) {
+                         ShopInventoryService shopInventoryService) {
         this.productService = productService;
         this.shopService = shopService;
         this.shopInventoryService = shopInventoryService;
     }
 
     public PagedResponse<SearchOpportunityResponse> searchProducts(String query, Double lat, Double lng,
-            String fulfillment, int page, int size, Long shopId) {
+                                                                   String fulfillment, int page, int size, Long shopId) {
         FulfillmentPreference preference = FulfillmentPreference.from(fulfillment);
 
         Optional<Location> userLocation = Optional.empty();
@@ -33,10 +33,14 @@ public class SearchService {
         }
 
         List<InventoryResponse> inventories;
-        if (shopId != null) {
-            inventories = shopInventoryService.searchByProductName(query, shopId);
-        } else {
+        if (shopId != null && (query != null && !query.isBlank())) {
+            inventories = shopInventoryService.searchByProductNameShopId(query, shopId);
+        } else if (shopId == null) {
             inventories = shopInventoryService.searchByProductName(query);
+        } else if (query == null || query.isBlank()) {
+            inventories = shopInventoryService.searchByShopId(shopId);
+        }else {
+            inventories = List.of();
         }
 
         List<SearchOpportunityResponse> opportunities = new ArrayList<>();

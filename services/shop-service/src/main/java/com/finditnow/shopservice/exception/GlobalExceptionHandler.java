@@ -1,5 +1,6 @@
 package com.finditnow.shopservice.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -11,47 +12,41 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorizedException(UnauthorizedException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                ex.getMessage(),
-                LocalDateTime.now());
+        log.error("UnauthorizedException: {}", ex.getMessage(), ex);
+        ErrorResponse error = new ErrorResponse(HttpStatus.UNAUTHORIZED.value(), ex.getMessage(), LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     @ExceptionHandler(NotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFoundException(NotFoundException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.NOT_FOUND.value(),
-                ex.getMessage(),
-                LocalDateTime.now());
+        log.error("NotFoundException: {}", ex.getMessage(), ex);
+        ErrorResponse error = new ErrorResponse(HttpStatus.NOT_FOUND.value(), ex.getMessage(), LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ErrorResponse> handleForbiddenException(ForbiddenException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.FORBIDDEN.value(),
-                ex.getMessage(),
-                LocalDateTime.now());
+        log.error("ForbiddenException: {}", ex.getMessage(), ex);
+        ErrorResponse error = new ErrorResponse(HttpStatus.FORBIDDEN.value(), ex.getMessage(), LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     @ExceptionHandler(BadRequestException.class)
     public ResponseEntity<ErrorResponse> handleBadRequestException(BadRequestException ex) {
-        ErrorResponse error = new ErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                ex.getMessage(),
-                LocalDateTime.now());
+        log.error("BadRequestException: {}", ex.getMessage(), ex);
+        ErrorResponse error = new ErrorResponse(HttpStatus.BAD_REQUEST.value(), ex.getMessage(), LocalDateTime.now());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        log.error("Validation failed: {}", ex.getMessage());
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach((error) -> {
             String fieldName = ((FieldError) error).getField();
@@ -59,15 +54,27 @@ public class GlobalExceptionHandler {
             errors.put(fieldName, errorMessage);
         });
 
-        ValidationErrorResponse response = new ValidationErrorResponse(
-                HttpStatus.BAD_REQUEST.value(),
-                "Validation failed",
-                LocalDateTime.now(),
-                errors);
+        ValidationErrorResponse response = new ValidationErrorResponse(HttpStatus.BAD_REQUEST.value(), "Validation failed", LocalDateTime.now(), errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // Error Response classes
+    @ExceptionHandler(CartNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleCartNotFoundException(CartNotFoundException ex) {
+        log.error("CartNotFoundException: {}", ex.getMessage());
+        ErrorResponse error = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleAllOtherExceptions(Exception ex) {
+        log.error("🔥 UNHANDLED EXCEPTION (This is what's causing the 403!): {}", ex.getMessage(), ex);
+        ErrorResponse error = new ErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "An unexpected error occurred: " + ex.getMessage(), LocalDateTime.now());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
     public static class ErrorResponse {
         private int status;
         private String message;
@@ -107,8 +114,7 @@ public class GlobalExceptionHandler {
     public static class ValidationErrorResponse extends ErrorResponse {
         private Map<String, String> errors;
 
-        public ValidationErrorResponse(int status, String message, LocalDateTime timestamp,
-                Map<String, String> errors) {
+        public ValidationErrorResponse(int status, String message, LocalDateTime timestamp, Map<String, String> errors) {
             super(status, message, timestamp);
             this.errors = errors;
         }
