@@ -5,6 +5,7 @@ import com.finditnow.orderservice.dtos.CreateOrderFromCartRequest;
 import com.finditnow.orderservice.dtos.OrderResponse;
 import com.finditnow.orderservice.dtos.StatusUpdateRequest;
 import com.finditnow.orderservice.services.OrderService;
+import org.springframework.data.domain.Page;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -63,6 +64,27 @@ public class OrderController {
             @RequestBody StatusUpdateRequest request) {
         OrderResponse order = orderService.updateOrderStatus(orderId, request.getStatus());
         return ResponseEntity.ok(order);
+    }
+
+    @GetMapping("/shop/{shopId}")
+    public ResponseEntity<Page<OrderResponse>> getShopOrders(
+            @PathVariable Long shopId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getShopOrders(shopId, page, size));
+    }
+
+    @GetMapping("/shop/{shopId}/earnings")
+    public ResponseEntity<Double> getShopEarnings(@PathVariable Long shopId) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getShopEarnings(shopId));
+    }
+
+    @GetMapping("/shop/{shopId}/recent-products")
+    public ResponseEntity<List<String>> getRecentShopProducts(@PathVariable Long shopId) {
+        // TODO: Validate user owns the shop
+        return ResponseEntity.ok(orderService.getRecentShopProducts(shopId));
     }
 
     /**
