@@ -36,18 +36,11 @@ public class UserServiceImpl extends UserServiceGrpc.UserServiceImplBase {
         userDao.save(user);
 
         if ("DELIVERY_AGENT".equals(req.getRole())) {
-            try {
-                InterServiceClient.call("delivery-service", "/delivery-agent/add", "POST", objMapper.writeValueAsString(
-                        CreateDeliveryAgentRequest.builder().agentId(user.getId()).build()
-                ));
-            }catch (Exception e) {
-                log.error("failed to call delivery-service for delivery agent creation {}",
-                        user.getId(), e);
-                throw new RuntimeException("Internal server error", e);
-            }
+            createDeliveryAgent(user.getId());
         }
 
-        var profile = UserProfile.newBuilder().setId(req.getId()).setEmail(req.getEmail()).setName(req.getName()).build();
+        var profile = UserProfile.newBuilder().setId(req.getId()).setEmail(req.getEmail()).setName(req.getName())
+                .build();
 
         resp.onNext(UserProfileResponse.newBuilder().setUser(profile).build());
         resp.onCompleted();
@@ -58,17 +51,35 @@ public class UserServiceImpl extends UserServiceGrpc.UserServiceImplBase {
         User user = userDao.findById(UUID.fromString(request.getId())).orElse(null);
 
         if (user == null) {
-            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Update failed").setError("No such user").build());
+            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                    .setMessage("Update failed").setError("No such user").build());
             responseObserver.onCompleted();
             return;
         }
-
 
         user.setRole(request.getRole());
 
         userDao.save(user);
 
-        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Role updated successfully to: " + request.getRole()).build());
+        if ("DELIVERY_AGENT".equals(request.getRole())) {
+            createDeliveryAgent(user.getId());
+        }
+
+        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                .setMessage("Role updated successfully to: " + request.getRole()).build());
         responseObserver.onCompleted();
+    }
+
+    private void createDeliveryAgent(UUID userId) {
+        try {
+            InterServiceClient.call("delivery-service", "/delivery-agent/add", "POST", objMapper.writeValueAsString(
+                    CreateDeliveryAgentRequest.builder().agentId(userId).build()));
+        } catch (Exception e) {
+            log.error("failed to call delivery-service for delivery agent creation {}",
+                    userId, e);
+            // We log but don't throw, to avoid rolling back the user role update if
+            // delivery service is down
+            // ideally we should have a retry mechanism or transactional inbox pattern
+        }
     }
 }
