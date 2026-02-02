@@ -3,6 +3,9 @@ package com.finditnow.userservice.security;
 import com.finditnow.jwt.JwtService;
 import com.finditnow.jwt.exceptions.JwtExpiredException;
 import com.finditnow.redis.RedisStore;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,26 +33,50 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        if (token == null || redis.isAccessTokenBlacklisted(token)) {
-            System.out.print("AUTHENTICATION INVALID TOKEN");
-            if (token != null) {
-                System.out.println(" >>>> " + token);
-            }
+        if (token == null) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        if (redis.isAccessTokenBlacklisted(token)) {
+            System.out.println("AUTHENTICATION INVALID TOKEN (blacklisted) >>>> " + token);
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            Map<String, String> userInfo = jwt.parseTokenToUser(token);
+            Jws<Claims> claims = jwt.parseClaims(token);
+            String tokenType = claims.getPayload().get("typ", String.class);
 
-            // Attach identity to request context
-            request.setAttribute("userId", UUID.fromString(userInfo.get("userId")));
-            request.setAttribute("profile", userInfo.get("profile"));
+            if ("service".equals(tokenType)) {
+                // Service-to-service token
+                String serviceName = claims.getPayload().getSubject();
+                request.setAttribute("tokenType", "service");
+                request.setAttribute("serviceName", serviceName);
+                request.setAttribute("role", "SERVICE");
+
+                System.out.println("Service token authenticated: " + serviceName);
+            } else {
+                // User token
+                String userId = claims.getPayload().get("userId", String.class);
+                String profile = claims.getPayload().get("profile", String.class);
+
+                request.setAttribute("tokenType", "user");
+                request.setAttribute("userId", UUID.fromString(userId));
+                request.setAttribute("profile", profile);
+                request.setAttribute("role", profile.toUpperCase());
+
+                System.out.println("User token authenticated: " + userId + " (" + profile + ")");
+            }
 
             filterChain.doFilter(request, response);
-        } catch (JwtExpiredException e) {
+
+        } catch (JwtException e) {
+            // Covers JwtExpiredException and other JWT validation errors
+            System.out.println("JWT validation failed: " + e.getMessage());
             sendUnauthorized(response, "token_expired");
-        } catch (ServletException e) {
+        } catch (Exception e) {
+            System.out.println("Authentication error: " + e.getMessage());
             sendUnauthorized(response, "unauthorized");
         }
     }
@@ -61,7 +88,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     private void sendUnauthorized(HttpServletResponse response, String message) throws IOException {
-
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json");
 

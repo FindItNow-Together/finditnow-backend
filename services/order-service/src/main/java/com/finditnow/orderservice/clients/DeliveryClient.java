@@ -1,5 +1,8 @@
 package com.finditnow.orderservice.clients;
 
+import com.finditnow.interservice.InterServiceClient;
+import com.finditnow.interservice.JsonUtil;
+import com.finditnow.orderservice.dtos.DeliveryQuoteResponse;
 import com.finditnow.orderservice.dtos.InitiateDeliveryRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,8 +22,9 @@ public class DeliveryClient {
 
     public void initiateDelivery(InitiateDeliveryRequest request) {
         try {
-            String url = deliveryServiceUrl + "/deliveries/initiate";
-            restTemplate.postForObject(url, request, Object.class);
+            InterServiceClient.call("delivery-service", "/deliveries/initiate", "POST", JsonUtil.toJson(request));
+//            String url = deliveryServiceUrl + "/deliveries/initiate";
+//            restTemplate.postForObject(url, request, Object.class);
             log.info("Initiated delivery for order: {}", request.getOrderId());
         } catch (Exception e) {
             log.error("Failed to initiate delivery for order: {}", request.getOrderId(), e);
@@ -30,9 +34,13 @@ public class DeliveryClient {
     public com.finditnow.orderservice.dtos.DeliveryQuoteResponse calculateQuote(
             com.finditnow.orderservice.dtos.DeliveryQuoteRequest request) {
         try {
-            String url = deliveryServiceUrl + "/deliveries/calculate-quote";
-            return restTemplate.postForObject(url, request,
-                    com.finditnow.orderservice.dtos.DeliveryQuoteResponse.class);
+            var quoteRes = InterServiceClient.call("delivery-service", "/deliveries/calculate-quote", "POST", JsonUtil.toJson(request));
+
+            return JsonUtil.fromJson(quoteRes.body(), DeliveryQuoteResponse.class);
+
+//            String url = deliveryServiceUrl + "/deliveries/calculate-quote";
+//            return restTemplate.postForObject(url, request,
+//                    com.finditnow.orderservice.dtos.DeliveryQuoteResponse.class);
         } catch (Exception e) {
             log.error("Failed to calculate delivery quote", e);
             return new com.finditnow.orderservice.dtos.DeliveryQuoteResponse(0.0, 0.0);
