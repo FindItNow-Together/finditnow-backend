@@ -13,7 +13,6 @@ import com.finditnow.common.PasswordUtil;
 import com.finditnow.config.Config;
 import com.finditnow.dispatcher.EmailDispatcher;
 import com.finditnow.jwt.JwtService;
-import com.finditnow.mail.MailService;
 import com.finditnow.redis.RedisStore;
 import com.finditnow.user.CreateUserProfileRequest;
 import com.finditnow.user.UpdateUserRoleRequest;
@@ -34,7 +33,7 @@ import java.util.UUID;
 
 public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
-    private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
+    private static final EmailDispatcher mailer = new EmailDispatcher();
     private final AuthDao authDao;
     private final RedisStore redis;
     private final JwtService jwt;
@@ -73,8 +72,7 @@ public class AuthService {
                 UUID userId = UUID.randomUUID();
                 String pwHash = PasswordUtil.hash(signUpReq.getPassword());
 
-                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(),
-                        pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
                 cred.setFirstName(signUpReq.getFirstName());
 
                 authDao.credDao.insert(conn, cred);
@@ -582,7 +580,7 @@ public class AuthService {
         }
 
         //recheck session for phantom cache entry
-        var updatedSession =  transactionManager.executeInTransaction(conn -> {
+        var updatedSession = transactionManager.executeInTransaction(conn -> {
             Optional<AuthSession> dbSession = authDao.sessionDao.findBySessionToken(conn, refreshToken);
 
             //phantom cache entry check
@@ -602,7 +600,7 @@ public class AuthService {
             return finalDbSession;
         });
 
-        if(updatedSession == null) {
+        if (updatedSession == null) {
             redis.deleteRefreshToken(refreshToken);
             data.put("error", "invalid_refresh");
             return new AuthResponse(401, data);

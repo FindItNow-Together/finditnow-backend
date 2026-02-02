@@ -1,7 +1,6 @@
 package com.finditnow.userservice.security;
 
 import com.finditnow.jwt.JwtService;
-import com.finditnow.jwt.exceptions.JwtExpiredException;
 import com.finditnow.redis.RedisStore;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
@@ -15,7 +14,6 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.UUID;
 
 @Component

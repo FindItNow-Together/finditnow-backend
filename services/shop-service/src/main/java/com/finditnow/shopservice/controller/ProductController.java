@@ -1,8 +1,8 @@
 package com.finditnow.shopservice.controller;
 
+import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.dto.ProductRequest;
 import com.finditnow.shopservice.dto.ProductResponse;
-import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

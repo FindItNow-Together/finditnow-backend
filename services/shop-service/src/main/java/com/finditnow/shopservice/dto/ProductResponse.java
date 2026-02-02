@@ -1,6 +1,5 @@
 package com.finditnow.shopservice.dto;
 
-import com.finditnow.shopservice.entity.Category;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

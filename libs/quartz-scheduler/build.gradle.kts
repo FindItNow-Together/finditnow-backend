@@ -14,7 +14,7 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     api(project(":libs:mail"))
-    implementation("org.quartz-scheduler:quartz:2.5.1")
+    api("org.quartz-scheduler:quartz:2.5.1")
 }
 
 tasks.test {

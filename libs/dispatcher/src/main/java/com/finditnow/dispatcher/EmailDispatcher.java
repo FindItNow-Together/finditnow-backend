@@ -9,8 +9,8 @@ import java.util.Date;
 public class EmailDispatcher {
     private final MailService mailService;
 
-    public EmailDispatcher(MailService mailService) {
-        this.mailService = mailService;
+    public EmailDispatcher() {
+        this.mailService = MailService.getInstance();
     }
 
     public void send(String to, String subject, String body, boolean async) {

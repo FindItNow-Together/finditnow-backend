@@ -1,7 +1,6 @@
 package com.finditnow.orderservice.daos;
 
 import com.finditnow.orderservice.entities.Order;
-
 import com.finditnow.orderservice.repositories.OrderRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;

@@ -38,7 +38,7 @@ public class RedisStore {
     }
 
     public void putRefreshToken(String refreshToken, String sessionId, String credId, String userId, String profile,
-            long ttlMillis) {
+                                long ttlMillis) {
         System.out.println("TTLMillis: " + ttlMillis);
         try (Jedis j = pool.getResource()) {
             String key = "refresh:" + refreshToken;
@@ -108,7 +108,7 @@ public class RedisStore {
      */
     public void deleteKey(String key) {
         try (Jedis jed = pool.getResource()) {
-            jed.del(key);
+            jed.del(key + ":");
         }
     }
 }

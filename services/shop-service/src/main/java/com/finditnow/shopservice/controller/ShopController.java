@@ -1,10 +1,6 @@
 package com.finditnow.shopservice.controller;
 
-import com.finditnow.shopservice.dto.PagedResponse;
-import com.finditnow.shopservice.dto.ProductRequest;
-import com.finditnow.shopservice.dto.ProductResponse;
-import com.finditnow.shopservice.dto.ShopRequest;
-import com.finditnow.shopservice.dto.ShopResponse;
+import com.finditnow.shopservice.dto.*;
 import com.finditnow.shopservice.service.ProductService;
 import com.finditnow.shopservice.service.ShopService;
 import jakarta.validation.Valid;
