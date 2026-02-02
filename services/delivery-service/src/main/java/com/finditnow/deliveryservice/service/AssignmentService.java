@@ -9,6 +9,7 @@ import com.finditnow.deliveryservice.repository.DeliveryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
@@ -35,7 +36,7 @@ public class AssignmentService {
          * Any exception thrown here should be swallowed by the caller,
          * as assignment is best-effort.
          */
-        @Transactional
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
         public void attemptAssignment() {
 
                 Optional<DeliveryAgent> agentOpt = deliveryAgentRepository.findFirstAvailableForAssignment(
