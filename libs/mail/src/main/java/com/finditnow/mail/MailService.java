@@ -16,6 +16,8 @@ public class MailService {
         String userName = Config.get("EMAIL_APP_USERNAME", "example@example.com");
         String userPwd = Config.get("EMAIL_APP_PWD", "very_secure_app_password");
 
+        System.out.println("mail server config params " + userName + " " + userPwd);
+
         this.session = MailConfig.createSession(userName, userPwd);
         this.from = userName;
     }

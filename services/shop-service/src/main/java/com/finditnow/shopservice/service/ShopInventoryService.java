@@ -183,7 +183,11 @@ public class ShopInventoryService {
         return inventoryMapper.toDto(shopInventoryRepository.save(inv));
     }
 
-    public List<InventoryResponse> searchByProductName(String prodName, Long shopId) {
+    public List<InventoryResponse> searchByProductNameShopId(String prodName, Long shopId) {
         return inventoryMapper.toDtoList(shopInventoryRepository.searchByProductNameAndShopId(prodName, shopId));
+    }
+
+    public List<InventoryResponse> searchByShopId(Long shopId) {
+        return inventoryMapper.toDtoList(shopInventoryRepository.findByShopId(shopId));
     }
 }

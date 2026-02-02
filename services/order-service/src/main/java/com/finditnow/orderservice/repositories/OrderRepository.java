@@ -1,7 +1,6 @@
 package com.finditnow.orderservice.repositories;
 
 import com.finditnow.orderservice.entities.Order;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +22,13 @@ public interface OrderRepository extends JpaRepository<Order, UUID> {
     @Query("SELECT SUM(o.totalAmount) FROM Order o WHERE o.shopId = :shopId AND o.status <> 'CANCELLED'")
     Double calculateTotalEarningsByShopId(@Param("shopId") Long shopId);
 
-    @Query("SELECT DISTINCT i.productName, o.createdAt FROM Order o JOIN o.orderItems i WHERE o.shopId = :shopId ORDER BY o.createdAt DESC")
+    @Query("""
+            SELECT i.productName
+            FROM Order o
+            JOIN o.orderItems i
+            WHERE o.shopId = :shopId
+            GROUP BY i.productName
+            ORDER BY MAX(o.createdAt) DESC
+            """)
     List<String> findRecentProductNamesByShopId(@Param("shopId") Long shopId, Pageable pageable);
 }
