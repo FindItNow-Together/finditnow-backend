@@ -182,4 +182,8 @@ public class ShopInventoryService {
         inv.setReservedStock(newReserved);
         return inventoryMapper.toDto(shopInventoryRepository.save(inv));
     }
+
+    public List<InventoryResponse> searchByProductName(String prodName, Long shopId) {
+        return inventoryMapper.toDtoList(shopInventoryRepository.searchByProductNameAndShopId(prodName, shopId));
+    }
 }

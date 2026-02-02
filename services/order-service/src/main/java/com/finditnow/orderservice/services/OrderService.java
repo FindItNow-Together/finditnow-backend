@@ -193,6 +193,58 @@ public class OrderService {
         }
     }
 
+    /**
+     * Customer cancels their own order. Allowed only when status is CREATED, CONFIRMED, or PAID.
+     * Propagates cancellation to Delivery service. If payment was PAID, sets payment status to REFUND_PENDING.
+     */
+    @Transactional
+    public OrderResponse cancelOrderByCustomer(UUID orderId, UUID userId, String reason) {
+        Order order = orderDao.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: order does not belong to you");
+        }
+
+        Order.OrderStatus status = order.getStatus();
+        if (status == Order.OrderStatus.CANCELLED) {
+            throw new RuntimeException("Order is already cancelled");
+        }
+        if (status == Order.OrderStatus.OUT_FOR_DELIVERY
+                || status == Order.OrderStatus.DELIVERED
+                || status == Order.OrderStatus.PACKED
+                || status == Order.OrderStatus.PICKED_UP
+                || status == Order.OrderStatus.IN_TRANSIT
+                || status == Order.OrderStatus.FAILED) {
+            throw new RuntimeException("Order cannot be cancelled in current state");
+        }
+
+        if (reason == null || reason.trim().length() < 5) {
+            throw new RuntimeException("Cancellation reason must be at least 5 characters");
+        }
+
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        order.setCancelledBy(Order.CancelledBy.CUSTOMER);
+        order.setCancellationReason(reason.trim());
+        order.setCancelledAt(LocalDateTime.now());
+
+        if (order.getPaymentStatus() == Order.PaymentStatus.PAID) {
+            order.setPaymentStatus(Order.PaymentStatus.REFUND_PENDING);
+            // TODO: Integrate with payment gateway to trigger refund when ready
+        }
+
+        Order savedOrder = orderDao.save(order);
+
+        try {
+            InterServiceClient.call("delivery-service", "/deliveries/order/" + orderId + "/cancel", "PUT", "{}");
+            log.info("Delivery cancelled for order {}", orderId);
+        } catch (Exception e) {
+            log.error("Failed to cancel delivery for order {}; order cancellation not rolled back", orderId, e);
+        }
+
+        return mapToOrderResponse(savedOrder);
+    }
+
     private OrderResponse mapToOrderResponse(Order order) {
         OrderResponse response = new OrderResponse();
         response.setId(order.getId());
@@ -203,7 +255,13 @@ public class OrderService {
         response.setPaymentStatus(order.getPaymentStatus().name().toLowerCase());
         response.setTotalAmount(order.getTotalAmount());
         response.setDeliveryAddressId(order.getDeliveryAddressId());
-        response.setCreatedAt(order.getCreatedAt().toString());
+        response.setCreatedAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null);
+
+        if (order.getCancelledBy() != null) {
+            response.setCancelledBy(order.getCancelledBy().name().toLowerCase());
+            response.setCancellationReason(order.getCancellationReason());
+            response.setCancelledAt(order.getCancelledAt() != null ? order.getCancelledAt().toString() : null);
+        }
 
         List<OrderItemResponse> items = order.getOrderItems().stream()
                 .map(item -> {
