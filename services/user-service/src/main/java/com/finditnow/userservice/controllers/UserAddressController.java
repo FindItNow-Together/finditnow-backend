@@ -1,5 +1,6 @@
 package com.finditnow.userservice.controllers;
 
+import com.finditnow.interservice.InterServiceClient;
 import com.finditnow.userservice.dto.ApiResponse;
 import com.finditnow.userservice.dto.PagedResponse;
 import com.finditnow.userservice.dto.UserAddressDto;
@@ -77,6 +78,9 @@ public class UserAddressController {
             @PathVariable UUID id,
             @Valid @RequestBody UserAddressDto addressDto) {
         UserAddressDto updatedAddress = userAddressService.updateAddress(id, addressDto);
+
+        InterServiceClient.invalidateCache("user-service", "/addresses/" + id);
+
         return ResponseEntity.ok(ApiResponse.<UserAddressDto>builder()
                 .success(true)
                 .message("Address updated successfully")
@@ -87,6 +91,9 @@ public class UserAddressController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable UUID id) {
         userAddressService.deleteAddress(id);
+
+        InterServiceClient.invalidateCache("user-service", "/addresses/" + id);
+
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
                 .message("Address deleted successfully")

@@ -47,7 +47,7 @@ public abstract class BaseController {
             cookie.setMaxAge((int) refreshTokenMaxLifeSeconds);
         }
 
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+        if (!Config.IS_PRODUCTION) {
             cookie.setSameSiteMode("Lax");
             cookie.setPath("/");
         } else {

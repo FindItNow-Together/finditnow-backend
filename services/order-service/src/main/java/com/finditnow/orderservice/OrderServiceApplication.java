@@ -1,5 +1,6 @@
 package com.finditnow.orderservice;
 
+import com.finditnow.config.Config;
 import com.finditnow.database.Database;
 import com.finditnow.interservice.InterServiceClient;
 import org.springframework.boot.SpringApplication;
@@ -10,7 +11,7 @@ public class OrderServiceApplication {
     public static void main(String[] args) {
         Database.setEnv("order_service");
 
-        InterServiceClient.init("order-service", "verylongunimaginablesecret");
+        InterServiceClient.init("order-service", Config.get("ORDER_SERVICE_SECRET","verylongunimaginablesecret"));
 
         SpringApplication.run(OrderServiceApplication.class, args);
     }

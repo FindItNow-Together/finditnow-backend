@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
+
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -19,13 +21,18 @@ public class DeliveryClient {
 
     @Value("${delivery.service.url:http://localhost:8086}")
     private String deliveryServiceUrl;
+    private static final long QUOTE_CACHE_SECONDS = Duration.ofDays(15).toSeconds();
 
     public void initiateDelivery(InitiateDeliveryRequest request) {
         try {
-            InterServiceClient.call("delivery-service", "/deliveries/initiate", "POST", JsonUtil.toJson(request));
+            var res = InterServiceClient.call("delivery-service", "/deliveries/initiate", "POST", JsonUtil.toJson(request));
 //            String url = deliveryServiceUrl + "/deliveries/initiate";
 //            restTemplate.postForObject(url, request, Object.class);
-            log.info("Initiated delivery for order: {}", request.getOrderId());
+            if (res.statusCode() >= 200 && res.statusCode() < 300) {
+                log.info("Initiated delivery for order: {}", request.getOrderId());
+            }else{
+                throw new RuntimeException("Failed to initiate delivery: status code " + res.statusCode());
+            }
         } catch (Exception e) {
             log.error("Failed to initiate delivery for order: {}", request.getOrderId(), e);
         }
@@ -34,7 +41,11 @@ public class DeliveryClient {
     public com.finditnow.orderservice.dtos.DeliveryQuoteResponse calculateQuote(
             com.finditnow.orderservice.dtos.DeliveryQuoteRequest request) {
         try {
-            var quoteRes = InterServiceClient.call("delivery-service", "/deliveries/calculate-quote", "POST", JsonUtil.toJson(request));
+            String deliveryQuoteReq = JsonUtil.toJson(request);
+
+            var quoteRes = InterServiceClient.call("delivery-service", "/deliveries/calculate-quote", "POST", deliveryQuoteReq, true, QUOTE_CACHE_SECONDS);
+
+            log.info("Delivery quote received: {}; for request: {}", quoteRes.body(), deliveryQuoteReq);
 
             return JsonUtil.fromJson(quoteRes.body(), DeliveryQuoteResponse.class);
 

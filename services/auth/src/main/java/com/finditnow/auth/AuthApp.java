@@ -6,6 +6,7 @@ import com.finditnow.auth.controller.AuthController;
 import com.finditnow.auth.controller.OauthController;
 import com.finditnow.auth.controller.ServiceTokenController;
 import com.finditnow.auth.dao.AuthDao;
+import com.finditnow.auth.jobs.RevokeExpiredSessionJob;
 import com.finditnow.auth.server.HTTPServer;
 import com.finditnow.auth.service.AuthService;
 import com.finditnow.auth.service.OAuthService;
@@ -22,8 +23,17 @@ import javax.sql.DataSource;
 public class AuthApp {
     private static final Logger logger = LoggerFactory.getLogger(AuthApp.class);
 
-    public static void main(String[] args) {
+    // Singleton holder pattern - thread-safe lazy initialization
+    private static class ServiceHolder {
+        private static volatile boolean initialized = false;
+        private static AuthService authService;
+        private static OAuthService oauthService;
+        private static JwtService jwtService;
+        private static RedisStore redisStore;
+        private static AuthDao authDao;
+    }
 
+    public static void main(String[] args) {
         try {
             String grpcHost = Config.get("USER_SERVICE_GRPC_HOST", "localhost");
             int grpcPort = Integer.parseInt(Config.get("USER_SERVICE_GRPC_PORT", "8082"));
@@ -32,21 +42,74 @@ public class AuthApp {
 
             DataSource ds = new Database("auth_service").get();
             DatabaseMigrations.migrate(ds);
-            RedisStore redis = RedisStore.getInstance();
-            JwtService jwt = new JwtService();
-            AuthDao authDao = new AuthDao(ds);
-            AuthService authService = new AuthService(authDao, redis, jwt);
-            AuthController authController = new AuthController(authService);
 
-            OAuthService oauth = new OAuthService(authService, redis, jwt);
-            OauthController oauthController = new OauthController(oauth);
+            // Initialize services
+            ServiceHolder.redisStore = RedisStore.getInstance();
+            ServiceHolder.jwtService = new JwtService();
+            ServiceHolder.authDao = new AuthDao(ds);
+            ServiceHolder.authService = new AuthService(
+                    ServiceHolder.authDao,
+                    ServiceHolder.redisStore,
+                    ServiceHolder.jwtService
+            );
+            ServiceHolder.oauthService = new OAuthService(
+                    ServiceHolder.authService,
+                    ServiceHolder.redisStore,
+                    ServiceHolder.jwtService
+            );
+            ServiceHolder.initialized = true;
+
+            AuthController authController = new AuthController(ServiceHolder.authService);
+            OauthController oauthController = new OauthController(ServiceHolder.oauthService);
 
             Scheduler.init();
-            new HTTPServer(authController, oauthController, new ServiceTokenController(jwt), jwt);
+            RevokeExpiredSessionJob.runJob();
+
+            new HTTPServer(
+                    authController,
+                    oauthController,
+                    new ServiceTokenController(ServiceHolder.jwtService),
+                    ServiceHolder.jwtService
+            );
+
+            logger.info("AuthApp started successfully");
+
         } catch (Exception e) {
             logger.error("Failed to start server", e);
             logger.error("SERVER DID NOT START! TERMINATING...");
             System.exit(1);
+        }
+    }
+
+    // Public accessor methods with initialization check
+    public static AuthService getAuthService() {
+        ensureInitialized();
+        return ServiceHolder.authService;
+    }
+
+    public static OAuthService getOAuthService() {
+        ensureInitialized();
+        return ServiceHolder.oauthService;
+    }
+
+    public static JwtService getJwtService() {
+        ensureInitialized();
+        return ServiceHolder.jwtService;
+    }
+
+    public static RedisStore getRedisStore() {
+        ensureInitialized();
+        return ServiceHolder.redisStore;
+    }
+
+    public static AuthDao getAuthDao() {
+        ensureInitialized();
+        return ServiceHolder.authDao;
+    }
+
+    private static void ensureInitialized() {
+        if (!ServiceHolder.initialized) {
+            throw new IllegalStateException("AuthApp services not initialized. Ensure main() has been called.");
         }
     }
 }

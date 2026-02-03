@@ -49,11 +49,12 @@ public final class InterServiceClient {
 
     /**
      * Overloaded method with cache flag
+     *
      * @param toService target service name
-     * @param path API path
-     * @param method HTTP method
-     * @param body request body (can be null for GET)
-     * @param useCache whether to use Redis cache (only applies to GET requests)
+     * @param path      API path
+     * @param method    HTTP method
+     * @param body      request body (can be null for GET)
+     * @param useCache  whether to use Redis cache (only applies to GET requests)
      * @return HTTP response
      */
     public static HttpResponse<String> call(String toService, String path, String method, String body, boolean useCache) throws Exception {
@@ -62,16 +63,16 @@ public final class InterServiceClient {
 
     /**
      * Overloaded method with cache flag and custom TTL
-     * @param toService target service name
-     * @param path API path
-     * @param method HTTP method
-     * @param body request body (can be null for GET)
-     * @param useCache whether to use Redis cache (only applies to GET requests)
+     *
+     * @param toService       target service name
+     * @param path            API path
+     * @param method          HTTP method
+     * @param body            request body (can be null for GET)
+     * @param useCache        whether to use Redis cache (only applies to GET requests)
      * @param cacheTtlSeconds cache TTL in seconds
      * @return HTTP response
      */
-    public static HttpResponse<String> call(String toService, String path, String method, String body,
-                                            boolean useCache, long cacheTtlSeconds) throws Exception {
+    public static HttpResponse<String> call(String toService, String path, String method, String body, boolean useCache, long cacheTtlSeconds) throws Exception {
 
         // Only cache GET requests
         if (useCache && "GET".equalsIgnoreCase(method) && redisStore != null) {
@@ -84,13 +85,13 @@ public final class InterServiceClient {
 
     // ---------- CACHE-ENABLED CALL ----------
 
-    private static HttpResponse<String> callWithCache(String toService, String path, String method,
-                                                      String body, long cacheTtlSeconds) throws Exception {
+    private static HttpResponse<String> callWithCache(String toService, String path, String method, String body, long cacheTtlSeconds) throws Exception {
         String cacheKey = buildCacheKey(toService, path, body);
 
         // Try to get from cache
         String cachedResponse = redisStore.getKeyValue(cacheKey);
         if (cachedResponse != null) {
+            System.out.println("cache hit for cache key: " + cacheKey + " ; returning cached response");
             return deserializeCachedResponse(cachedResponse);
         }
 
@@ -106,8 +107,7 @@ public final class InterServiceClient {
         return response;
     }
 
-    private static HttpResponse<String> callWithoutCache(String toService, String path, String method,
-                                                         String body) throws Exception {
+    private static HttpResponse<String> callWithoutCache(String toService, String path, String method, String body) throws Exception {
         String token = getServiceToken(toService);
 
         HttpRequest request = buildRequest(toService, path, method, body, token);
@@ -253,35 +253,35 @@ public final class InterServiceClient {
     private record CachedHttpResponse(int statusCode, String body) implements HttpResponse<String> {
 
         @Override
-            public HttpRequest request() {
-                return null;
-            }
-
-            @Override
-            public Optional<HttpResponse<String>> previousResponse() {
-                return Optional.empty();
-            }
-
-            @Override
-            public HttpHeaders headers() {
-                return HttpHeaders.of(new HashMap<>(), (a, b) -> true);
-            }
-
-            @Override
-            public Optional<SSLSession> sslSession() {
-                return Optional.empty();
-            }
-
-            @Override
-            public URI uri() {
-                return null;
-            }
-
-            @Override
-            public HttpClient.Version version() {
-                return HttpClient.Version.HTTP_1_1;
-            }
+        public HttpRequest request() {
+            return null;
         }
+
+        @Override
+        public Optional<HttpResponse<String>> previousResponse() {
+            return Optional.empty();
+        }
+
+        @Override
+        public HttpHeaders headers() {
+            return HttpHeaders.of(new HashMap<>(), (a, b) -> true);
+        }
+
+        @Override
+        public Optional<SSLSession> sslSession() {
+            return Optional.empty();
+        }
+
+        @Override
+        public URI uri() {
+            return null;
+        }
+
+        @Override
+        public HttpClient.Version version() {
+            return HttpClient.Version.HTTP_1_1;
+        }
+    }
 }
 
 

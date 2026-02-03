@@ -41,7 +41,7 @@ public class MailService {
 
             message.setContent(body, "text/html; charset=utf-8");
 
-            if (!"development".equals(Config.get("ENVIRONMENT", "development"))) {
+            if (Config.IS_PRODUCTION) {
                 Transport.send(message);
             }
 

@@ -57,7 +57,7 @@ public class DeliveryController {
 
     /**
      * Get deliveries assigned to a specific agent with pagination and filtering
-     * 
+     *
      * @param userIdStr agent id
      * @param status    optional status filter
      * @param page      page number (0-indexed)

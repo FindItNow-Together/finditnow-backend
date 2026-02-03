@@ -49,13 +49,21 @@ public class AuthService {
 
     public AuthResponse signUp(SignUpDto signUpReq) {
         try {
+            Map<String, String> data = new HashMap<>();
+            if (Config.IS_PRODUCTION) {
+                if (!PasswordUtil.checkPwdString(signUpReq.getPassword())) {
+                    data.put("error", "password not in desired format");
+                    return new AuthResponse(400, data);
+                }
+            }
+
             return transactionManager.executeInTransaction(conn -> {
                 // Check for existing credential
                 Optional<AuthCredential> existingCred = authDao.credDao.findByEmail(conn, signUpReq.getEmail());
 
                 if (existingCred.isPresent()) {
                     AuthCredential cred = existingCred.get();
-                    Map<String, String> data = new HashMap<>();
+
 
                     if (cred.isEmailVerified()) {
                         data.put("error", "user_already_verified");
@@ -80,12 +88,11 @@ public class AuthService {
                 // Send verification email (outside transaction)
                 String emailOtp = sendVerificationEmail(signUpReq.getEmail(), credId.toString());
 
-                Map<String, String> data = new HashMap<>();
                 data.put("credId", credId.toString());
                 data.put("message", "verification email sent");
                 data.put("accessTokenValiditySeconds", "120");
 
-                if (Config.get("ENVIRONMENT", "development").equals("development")) {
+                if (!Config.IS_PRODUCTION) {
                     data.put("emailOtp", emailOtp);
                 }
 
@@ -462,7 +469,7 @@ public class AuthService {
         data.put("message", "verification email sent");
         data.put("accessTokenValiditySeconds", "120");
 
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+        if (!Config.IS_PRODUCTION) {
             data.put("emailOtp", emailOtp);
         }
 
@@ -516,7 +523,7 @@ public class AuthService {
     public AuthResponse updatePassword(String credId, String newPassword) {
         Map<String, String> data = new HashMap<>();
 
-        if (!PasswordUtil.checkPwdString(newPassword)) {
+        if (Config.IS_PRODUCTION && !PasswordUtil.checkPwdString(newPassword)) {
             data.put("error", "password not in desired format");
             return new AuthResponse(400, data);
         }
