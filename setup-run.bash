@@ -70,8 +70,24 @@ PID_AUTH=$!
 ./gradlew :services:user-service:bootRun &
 PID_USER=$!
 
+./gradlew :services:shop-service:bootRun &
+PID_SHOP=$!
+
+./gradlew :services:order-service:bootRun &
+PID_ORDER=$!
+
+./gradlew :services:delivery-service:bootRun &
+PID_DELIVERY=$!
+
+./gradlew :services:file-gateway:bootRun &
+PID_FILE=$!
+
 echo "> Started auth-service (PID: $PID_AUTH)"
 echo "> Started user-service (PID: $PID_USER)"
+echo "> Started shop-service (PID: $PID_SHOP)"
+echo "> Started order-service (PID: $PID_ORDER)"
+echo "> Started delivery-service (PID: $PID_DELIVERY)"
+echo "> Started file-gateway (PID: $PID_FILE)"
 
 echo
 echo "===[ Everything running ]==="

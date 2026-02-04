@@ -2,7 +2,6 @@ package com.finditnow.shopservice.config;
 
 import com.finditnow.shopservice.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,9 +22,6 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthenticationFilter;
 
-    @Value("${cors.allowed-origins:http://localhost:3000}")
-    private String[] allowedOrigins;
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -33,42 +29,44 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+        http.csrf(csrf -> csrf.disable())
+                // Disable HTTP Basic authentication (removes default password requirement)
+                .httpBasic(httpBasic -> httpBasic.disable())
+                // Disable form login (removes default login page)
+                .formLogin(formLogin -> formLogin.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(auth -> auth
+                        // ============ PUBLIC ENDPOINTS ============
+                        // Search and categories - fully public
+                        .requestMatchers("/search/**", "/categories/**").permitAll()
 
-                        // User management endpoints (ADMIN only)
-                        .requestMatchers("/api/v1/users/**").hasRole("ADMIN")
+                        // Shop search endpoint - public
+                        .requestMatchers("/shops/search").permitAll()
 
-                        // Shop endpoints
-                        .requestMatchers(HttpMethod.GET, "/api/v1/shops").hasRole("ADMIN") // Get all shops (ADMIN only)
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shops").hasAnyRole("SHOP", "ADMIN") // Create shop
-                                                                                                       // (SHOP/ADMIN)
-                        .requestMatchers("/api/v1/shops/**").hasAnyRole("SHOP", "ADMIN") // All other shop endpoints
+                        // ============ SHOP ENDPOINTS ============
+                        // Public READ access to shops
+                        .requestMatchers(HttpMethod.GET, "/shop/**").permitAll()
 
-                        // Product endpoints
-                        .requestMatchers("/api/v1/products/**").hasAnyRole("SHOP", "ADMIN")
+                        // Require authentication for CREATE/UPDATE/DELETE on shops
+                        .requestMatchers(HttpMethod.POST, "/shop/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.PUT, "/shop/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.DELETE, "/shop/**").hasAnyRole("SHOP", "ADMIN")
 
-                        // All other requests must be authenticated
-                        .anyRequest().permitAll())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        // ============ PRODUCT ENDPOINTS ============
+                        // Public READ access to products
+                        .requestMatchers(HttpMethod.GET, "/product/**").permitAll()
+
+                        // Require authentication for CREATE/UPDATE/DELETE on products
+                        .requestMatchers(HttpMethod.POST, "/product/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.PUT, "/product/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.DELETE, "/product/**").hasAnyRole("SHOP", "ADMIN")
+
+                        // ============ CART ENDPOINTS ============
+                        // Cart requires authentication for ALL operations
+                        // (removed .permitAll() for cart - uses @PreAuthorize in controller)
+
+                        // ============ INTERNAL SERVICE ENDPOINTS ============
+                        // Internal endpoints require SERVICE role
+                        .requestMatchers("/cart/*/internal/**").hasRole("SERVICE")
+
+                        // ============ DEFAULT ============
+                        // All other requests require authentication
+                        .anyRequest().authenticated()).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-//    @Bean
-//    public CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(Arrays.asList("*"));
-//        configuration.setAllowCredentials(true);
-//
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
-//    }
 }

@@ -42,8 +42,24 @@ public class Order {
 
     private UUID deliveryAddressId;
 
+    private Double deliveryCharge;
+
+    private String instructions;
+
+    private String deliveryType;
+
     @Column(updatable = false)
     private LocalDateTime createdAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cancelled_by")
+    private CancelledBy cancelledBy;
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
@@ -56,8 +72,11 @@ public class Order {
         CONFIRMED,
         PAID,
         PACKED,
+        PICKED_UP, // Delivery agent picked up from shop
+        IN_TRANSIT, // Delivery agent is traveling to customer
         OUT_FOR_DELIVERY,
         DELIVERED,
+        FAILED, // Delivery failed, will be re-pooled
         CANCELLED
     }
 
@@ -70,6 +89,12 @@ public class Order {
         PENDING,
         PAID,
         PARTIALLY_PAID,
-        FAILED
+        FAILED,
+        REFUND_PENDING
+    }
+
+    public enum CancelledBy {
+        CUSTOMER,
+        DELIVERY_AGENT
     }
 }

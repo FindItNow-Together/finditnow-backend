@@ -6,6 +6,8 @@ import com.finditnow.jwt.exceptions.JwtInvalidException;
 import io.undertow.server.HttpHandler;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.AttachmentKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
@@ -27,6 +29,13 @@ public class JwtAuthHandler implements HttpHandler {
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String path = exchange.getRequestPath();
+
+        // Internal endpoints must bypass JWT logic entirely
+        if (path.startsWith("/internal/")) {
+            next.handleRequest(exchange);
+            return;
+        }
+
         boolean isPrivate = privateRoutes.contains(path);
 
         String authHeader =

@@ -28,6 +28,7 @@ include("libs:redis")
 include("libs:jwt")
 include("libs:mail")
 include("libs:quartz-scheduler")
+include("libs:interservice-caller")
 
 // Services
 include("services:auth")
@@ -39,4 +40,5 @@ include("libs:proto")
 include("services:shop-service")
 include("services:file-gateway")
 include("services:order-service")
+include("services:delivery-service")
 include("services:review-system")

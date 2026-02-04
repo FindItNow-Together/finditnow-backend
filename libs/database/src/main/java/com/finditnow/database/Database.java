@@ -19,7 +19,8 @@ public class Database {
             throw new IllegalArgumentException("serviceName:dbName cannot be null or empty");
         }
         HikariConfig dbConfig = new HikariConfig();
-        dbConfig.setJdbcUrl("jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":" + Config.get("DB_PORT", "5432") + "/" + serviceName);
+        dbConfig.setJdbcUrl("jdbc:postgresql://" + Config.get("DB_HOST", "localhost") + ":"
+                + Config.get("DB_PORT", "5432") + "/" + serviceName);
 
         dbConfig.setUsername(Config.get("DB_USER", "devuser"));
         dbConfig.setPassword(Config.get("DB_PASSWORD", "dev@123"));
@@ -50,4 +51,3 @@ public class Database {
         return dataSource;
     }
 }
-
