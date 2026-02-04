@@ -9,7 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/deliveries")
@@ -17,6 +20,9 @@ import java.util.UUID;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+
+    // Web socket ticket store, (using in memory map for now)
+    private final Map<String, String> ticketStore = new ConcurrentHashMap<>();
 
     @PostMapping("/calculate-quote")
     public ResponseEntity<DeliveryQuoteResponse> calculateQuote(
@@ -112,5 +118,19 @@ public class DeliveryController {
             @RequestAttribute("userId") String userIdStr) {
         UUID agentId = UUID.fromString(userIdStr);
         return ResponseEntity.ok(deliveryService.optOutDelivery(id, agentId));
+    }
+
+    @PostMapping("/ws-ticket")
+    public ResponseEntity<Map<String, String>> createTicket(Principal principal) {
+        String ticket = UUID.randomUUID().toString();
+
+        ticketStore.put(ticket, principal.getName());
+
+        return ResponseEntity.ok(Map.of("ticket", ticket));
+    }
+
+    // Helper for the Interceptor
+    public String getUsernameFromTicket(String ticket) {
+        return ticketStore.remove(ticket); // Remove ensures one-time use
     }
 }

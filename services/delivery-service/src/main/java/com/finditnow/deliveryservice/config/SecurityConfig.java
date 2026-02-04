@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/deliveries/order/*/cancel").hasRole("SERVICE")
                         .requestMatchers("/deliveries/mine").hasRole("DELIVERY_AGENT")
                         .requestMatchers("/{id}/status").hasAnyRole("DELIVERY_AGENT", "ADMIN")
+                        .requestMatchers("/deliveries/ws-ticket").authenticated()
                         .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
