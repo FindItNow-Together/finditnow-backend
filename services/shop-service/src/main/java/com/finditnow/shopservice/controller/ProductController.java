@@ -48,7 +48,7 @@ public class ProductController extends BaseController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request,
@@ -61,7 +61,7 @@ public class ProductController extends BaseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
             Authentication authentication) {
