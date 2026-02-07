@@ -1,7 +1,6 @@
 package com.finditnow.shopservice.security;
 
 import com.finditnow.jwt.JwtService;
-import com.finditnow.jwt.exceptions.JwtExpiredException;
 import com.finditnow.jwt.exceptions.JwtValidationException;
 import com.finditnow.redis.RedisStore;
 import io.jsonwebtoken.Claims;

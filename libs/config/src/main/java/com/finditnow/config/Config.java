@@ -6,6 +6,7 @@ public class Config {
 
     private static final Dotenv SERVICE_ENV;
     private static final Dotenv ROOT_ENV;
+    public static final boolean IS_PRODUCTION;
 
     static {
         // Load service-level env (default: current working dir)
@@ -18,6 +19,8 @@ public class Config {
                 .directory("../../")
                 .ignoreIfMissing()
                 .load();
+
+        IS_PRODUCTION = Config.get("ENVIRONMENT") != null && "production".equalsIgnoreCase(Config.get("ENVIRONMENT"));
     }
 
     public static String get(String key, String defaultValue) {

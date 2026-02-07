@@ -1,22 +1,16 @@
 package com.finditnow.shopservice.service;
 
-import com.finditnow.shopservice.dto.AddInventoryRequest;
-import com.finditnow.shopservice.dto.InventoryRequest;
-import com.finditnow.shopservice.dto.InventoryResponse;
-import com.finditnow.shopservice.dto.UpdateInventoryRequest;
-import com.finditnow.shopservice.mapper.ShopInventoryMapper;
-import com.finditnow.shopservice.repository.ShopInventoryRepository;
-import org.springframework.stereotype.Service;
-
-import com.finditnow.shopservice.dto.ProductRequest;
-import com.finditnow.shopservice.dto.ProductResponse;
+import com.finditnow.shopservice.dto.*;
 import com.finditnow.shopservice.entity.Product;
 import com.finditnow.shopservice.entity.Shop;
 import com.finditnow.shopservice.entity.ShopInventory;
 import com.finditnow.shopservice.exception.NotFoundException;
+import com.finditnow.shopservice.mapper.ShopInventoryMapper;
 import com.finditnow.shopservice.repository.ProductRepository;
+import com.finditnow.shopservice.repository.ShopInventoryRepository;
 import com.finditnow.shopservice.repository.ShopRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;

@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,8 @@ public class OrderService {
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
     private final DeliveryClient deliveryClient;
+    private final long SHOP_CACHE_SECONDS = Duration.ofDays(15).toSeconds();
+    private final long USER_ADDRESS_CACHE_SECONDS = Duration.ofDays(15).toSeconds();
 
     // This should be configured via application.properties
     private static final String CART_SERVICE_URL = "http://localhost:8081";
@@ -53,12 +56,7 @@ public class OrderService {
         // 3.1 Calculate Delivery Charge
         double deliveryCharge = 0.0;
         if (!"TAKEAWAY".equalsIgnoreCase(request.getDeliveryType())) {
-            // TODO: Get actual lat/long from Shop and User Address
-            DeliveryQuoteResponse quote = deliveryClient.calculateQuote(
-                    DeliveryQuoteRequest.builder()
-                            .shopLatitude(0.0).shopLongitude(0.0)
-                            .userLatitude(0.0).userLongitude(0.0)
-                            .build());
+            DeliveryQuoteResponse quote = getDeliveryQuote(cart.getShopId(), request.getAddressId());
             deliveryCharge = quote.getAmount();
         }
         totalAmount += deliveryCharge;
@@ -159,13 +157,28 @@ public class OrderService {
     }
 
     public DeliveryQuoteResponse getDeliveryQuote(Long shopId, UUID addressId) {
-        // TODO: Fetch Shop and User Address to get real Lat/Long
-        // For now, mocking coordinates
-        return deliveryClient.calculateQuote(
-                DeliveryQuoteRequest.builder()
-                        .shopLatitude(0.0).shopLongitude(0.0)
-                        .userLatitude(0.0).userLongitude(0.0)
-                        .build());
+        try {
+            var shopRes = InterServiceClient.call("shop-service", "/shop/" + shopId.toString(), "GET", "{}", true, SHOP_CACHE_SECONDS);
+
+            log.info("Shop response received: {}", shopRes.body());
+
+            ShopResponse shopResponse = JsonUtil.fromJson(shopRes.body(), ShopResponse.class);
+
+            var userRes = InterServiceClient.call("user-service", "/addresses/" + addressId.toString(), "GET", "{}", true, USER_ADDRESS_CACHE_SECONDS);
+
+            log.info("User address received: {}", userRes.body());
+
+            UserAddressApiResponse.UserAddress userAddress = JsonUtil.fromJson(userRes.body(), UserAddressApiResponse.class).getData();
+
+            return deliveryClient.calculateQuote(
+                    DeliveryQuoteRequest.builder()
+                            .shopLatitude(shopResponse.getLatitude()).shopLongitude(shopResponse.getLongitude())
+                            .userLatitude(userAddress.getLatitude()).userLongitude(userAddress.getLongitude())
+                            .build());
+        } catch (Exception e) {
+            log.error("failed to get delivery quote:  {} , returning sample quote", e.getMessage(), e);
+            return new DeliveryQuoteResponse(0.0, 0.0);
+        }
     }
 
     private CartDTO fetchCart(UUID cartId, UUID userId) {
@@ -280,21 +293,31 @@ public class OrderService {
     }
 
     private void initiateDelivery(Order order) {
-        // TODO: Fetch Shop Address and Customer Address properly
-        String placeholderAddress = "To be fetched address";
-
-        InitiateDeliveryRequest request = InitiateDeliveryRequest.builder()
+        InitiateDeliveryRequest.InitiateDeliveryRequestBuilder request = InitiateDeliveryRequest.builder()
                 .orderId(order.getId())
                 .shopId(order.getShopId())
                 .customerId(order.getUserId())
                 .type(order.getDeliveryType())
                 .amount(order.getDeliveryCharge())
-                .pickupAddress(placeholderAddress) // We need to fetch shop address
-                .deliveryAddress(order.getDeliveryAddressId().toString()) // Ideally fetch address text
-                .instructions(order.getInstructions())
-                .build();
+                .instructions(order.getInstructions());
+        ShopResponse shopResponse = null;
+        UserAddressApiResponse.UserAddress userAddress = null;
+        try {
+            var shopRes = InterServiceClient.call("shop-service", "/shop/" + order.getShopId().toString(), "GET", null, true);
 
-        deliveryClient.initiateDelivery(request);
+            shopResponse = JsonUtil.fromJson(shopRes.body(), ShopResponse.class);
+
+            var userRes = InterServiceClient.call("user-service", "/addresses/" + order.getDeliveryAddressId().toString(), "GET", null, true);
+
+            userAddress = JsonUtil.fromJson(userRes.body(), UserAddressApiResponse.class).getData();
+            request.pickupAddress(shopResponse.getAddress())
+                    .deliveryAddress(userAddress.getFullAddress());
+        } catch (Exception e) {
+            log.error("failed rest call to shop service, or user service during intiate delivery {}", e.getMessage());
+            request.pickupAddress("Sample pickup address").deliveryAddress("sample delivery address");
+        }
+
+        deliveryClient.initiateDelivery(request.build());
     }
 
     @Transactional

@@ -1,86 +1,144 @@
 package com.finditnow.shopservice.service;
 
 import com.finditnow.shopservice.dto.*;
+import com.finditnow.shopservice.entity.Category;
+import com.finditnow.shopservice.entity.Product;
+import com.finditnow.shopservice.entity.Shop;
+import com.finditnow.shopservice.entity.ShopInventory;
+import com.finditnow.shopservice.repository.ShopInventoryRepository;
 import com.finditnow.shopservice.utils.DistanceUtil;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 public class SearchService {
     private final ProductService productService;
     private final ShopService shopService;
     private final ShopInventoryService shopInventoryService;
-
-    public SearchService(ProductService productService, ShopService shopService,
-                         ShopInventoryService shopInventoryService) {
-        this.productService = productService;
-        this.shopService = shopService;
-        this.shopInventoryService = shopInventoryService;
-    }
+    private final ShopInventoryRepository shopInventoryRepository;
 
     public PagedResponse<SearchOpportunityResponse> searchProducts(String query, Double lat, Double lng,
                                                                    String fulfillment, int page, int size, Long shopId) {
         FulfillmentPreference preference = FulfillmentPreference.from(fulfillment);
 
-        Optional<Location> userLocation = Optional.empty();
-
+        Optional<Location> userLocation;
         if (lat != null && lng != null) {
             userLocation = Optional.of(new Location(lat, lng));
+        } else {
+            userLocation = Optional.empty();
         }
 
-        List<InventoryResponse> inventories;
-        if (shopId != null && (query != null && !query.isBlank())) {
-            inventories = shopInventoryService.searchByProductNameShopId(query, shopId);
-        } else if (shopId == null) {
-            inventories = shopInventoryService.searchByProductName(query);
-        } else if (query == null || query.isBlank()) {
-            inventories = shopInventoryService.searchByShopId(shopId);
-        }else {
-            inventories = List.of();
+        // Use a single query with JOINs to fetch all data at once
+        Pageable pageable = PageRequest.of(page, size);
+        Page<ShopInventory> inventoryPage = shopInventoryRepository.searchOpportunities(
+                query, shopId, pageable
+        );
+
+        List<SearchOpportunityResponse> opportunities = inventoryPage.getContent().stream()
+                .map(inventory -> mapToOpportunity(inventory, userLocation, preference))
+                .filter(Objects::nonNull) // Filter out null (fulfillment mismatch)
+                .sorted(Comparator
+                        .comparing(SearchOpportunityResponse::getFulfillmentMode)
+                        .thenComparing(
+                                SearchOpportunityResponse::getDistanceInKm,
+                                Comparator.nullsLast(Double::compareTo)))
+                .toList();
+
+        return PagedResponse.<SearchOpportunityResponse>builder().content(opportunities).totalElements(inventoryPage.getTotalElements()).page(page).totalPages(inventoryPage.getTotalPages()).size(size)
+                .first(inventoryPage.isFirst()).last(inventoryPage.isLast()).build();
+    }
+
+    private SearchOpportunityResponse mapToOpportunity(ShopInventory inventory,
+                                                       Optional<Location> userLocation,
+                                                       FulfillmentPreference preference) {
+        Shop shop = inventory.getShop();
+        Product product = inventory.getProduct();
+
+        // Determine fulfillment mode
+        FulfillmentMode fulfillmentMode = "NO_DELIVERY".equals(shop.getDeliveryOption())
+                ? FulfillmentMode.PICKUP
+                : FulfillmentMode.DELIVERY;
+
+        // Filter by preference
+        if (!preference.allows(fulfillmentMode)) {
+            return null;
         }
 
-        List<SearchOpportunityResponse> opportunities = new ArrayList<>();
+        // Calculate distance
+        Double distance = userLocation
+                .map(loc -> DistanceUtil.km(loc, shop.getLatitude(), shop.getLongitude()))
+                .orElse(null);
 
-        for (InventoryResponse inventory : inventories) {
-            ProductResponse prod = productService.getById(inventory.getProduct().getId());
-            ShopResponse shop = shopService.getShopById(inventory.getShop().getId());
+        // Map to response objects
+        ProductResponse productResponse = mapToProductResponse(product);
+        ShopResponse shopResponse = mapToShopResponse(shop);
+        InventorySearchResponse inventoryResponse = new InventorySearchResponse(
+                inventory.getId(),
+                inventory.getReservedStock(),
+                inventory.getPrice(),
+                inventory.getStock()
+        );
 
-            FulfillmentMode fulfillmentMode = "NO_DELIVERY".equals(shop.getDeliveryOption()) ? FulfillmentMode.PICKUP
-                    : FulfillmentMode.DELIVERY;
+        SearchOpportunityResponse opportunity = new SearchOpportunityResponse();
+        opportunity.setProduct(productResponse);
+        opportunity.setShop(shopResponse);
+        opportunity.setInventory(inventoryResponse);
+        opportunity.setFulfillmentMode(fulfillmentMode);
+        opportunity.setDistanceInKm(distance);
 
-            if (!preference.allows(fulfillmentMode))
-                continue;
+        return opportunity;
+    }
 
-            InventorySearchResponse inventorySearchResponse = new InventorySearchResponse(inventory.getId(),
-                    inventory.getReservedStock(), inventory.getPrice(), inventory.getStock());
+    private ProductResponse mapToProductResponse(Product product) {
+        CategoryResponse categoryResponse = product.getCategory() != null
+                ? mapCategoryToCategoryResponse(product.getCategory()) : null;
 
-            Double distance = null;
-            if (userLocation.isPresent()) {
-                distance = DistanceUtil.km(userLocation.get(), shop.getLatitude(), shop.getLongitude());
-            }
+        return new ProductResponse(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                categoryResponse,
+                product.getImageUrl()
+        );
+    }
 
-            SearchOpportunityResponse opportunity = new SearchOpportunityResponse();
+    private ShopResponse mapToShopResponse(Shop shop) {
+        CategoryResponse categoryResponse = shop.getCategory() != null
+                ? mapCategoryToCategoryResponse(shop.getCategory())
+                : null;
 
-            opportunity.setProduct(prod);
-            opportunity.setShop(shop);
-            opportunity.setInventory(inventorySearchResponse);
-            opportunity.setFulfillmentMode(fulfillmentMode);
-            opportunity.setDistanceInKm(distance);
+        return new ShopResponse(
+                shop.getId(),
+                shop.getName(),
+                shop.getAddress(),
+                shop.getPhone(),
+                shop.getOwnerId(),
+                shop.getLatitude(),
+                shop.getLongitude(),
+                shop.getOpenHours(),
+                shop.getDeliveryOption(),
+                categoryResponse,
+                shop.getImageUrl()
+        );
+    }
 
-            opportunities.add(opportunity);
-        }
-
-        opportunities.sort(Comparator
-                .comparing(SearchOpportunityResponse::getFulfillmentMode)
-                .thenComparing(
-                        SearchOpportunityResponse::getDistanceInKm,
-                        Comparator.nullsLast(Double::compareTo)));
-
-        return buildPagedResponseFromOpportunities(opportunities, page, size);
+    private CategoryResponse mapCategoryToCategoryResponse(Category category) {
+        CategoryResponse categoryResponse = new CategoryResponse();
+        categoryResponse.setId(category.getId());
+        categoryResponse.setName(category.getName());
+        categoryResponse.setDescription(category.getDescription());
+        categoryResponse.setImageUrl(category.getImageUrl());
+        categoryResponse.setType(category.getType());
+        return categoryResponse;
     }
 
     public PagedResponse<SearchOpportunityResponse> buildPagedResponseFromOpportunities(

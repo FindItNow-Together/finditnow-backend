@@ -13,7 +13,6 @@ import com.finditnow.common.PasswordUtil;
 import com.finditnow.config.Config;
 import com.finditnow.dispatcher.EmailDispatcher;
 import com.finditnow.jwt.JwtService;
-import com.finditnow.mail.MailService;
 import com.finditnow.redis.RedisStore;
 import com.finditnow.user.CreateUserProfileRequest;
 import com.finditnow.user.UpdateUserRoleRequest;
@@ -34,7 +33,7 @@ import java.util.UUID;
 
 public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
-    private static final EmailDispatcher mailer = new EmailDispatcher(new MailService());
+    private static final EmailDispatcher mailer = new EmailDispatcher();
     private final AuthDao authDao;
     private final RedisStore redis;
     private final JwtService jwt;
@@ -50,13 +49,21 @@ public class AuthService {
 
     public AuthResponse signUp(SignUpDto signUpReq) {
         try {
+            Map<String, String> data = new HashMap<>();
+            if (Config.IS_PRODUCTION) {
+                if (!PasswordUtil.checkPwdString(signUpReq.getPassword())) {
+                    data.put("error", "password not in desired format");
+                    return new AuthResponse(400, data);
+                }
+            }
+
             return transactionManager.executeInTransaction(conn -> {
                 // Check for existing credential
                 Optional<AuthCredential> existingCred = authDao.credDao.findByEmail(conn, signUpReq.getEmail());
 
                 if (existingCred.isPresent()) {
                     AuthCredential cred = existingCred.get();
-                    Map<String, String> data = new HashMap<>();
+
 
                     if (cred.isEmailVerified()) {
                         data.put("error", "user_already_verified");
@@ -73,8 +80,7 @@ public class AuthService {
                 UUID userId = UUID.randomUUID();
                 String pwHash = PasswordUtil.hash(signUpReq.getPassword());
 
-                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(),
-                        pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
+                AuthCredential cred = new AuthCredential(credId, userId, signUpReq.getEmail(), signUpReq.getPhone(), pwHash, signUpReq.getRole(), false, false, OffsetDateTime.now());
                 cred.setFirstName(signUpReq.getFirstName());
 
                 authDao.credDao.insert(conn, cred);
@@ -82,12 +88,11 @@ public class AuthService {
                 // Send verification email (outside transaction)
                 String emailOtp = sendVerificationEmail(signUpReq.getEmail(), credId.toString());
 
-                Map<String, String> data = new HashMap<>();
                 data.put("credId", credId.toString());
                 data.put("message", "verification email sent");
                 data.put("accessTokenValiditySeconds", "120");
 
-                if (Config.get("ENVIRONMENT", "development").equals("development")) {
+                if (!Config.IS_PRODUCTION) {
                     data.put("emailOtp", emailOtp);
                 }
 
@@ -464,7 +469,7 @@ public class AuthService {
         data.put("message", "verification email sent");
         data.put("accessTokenValiditySeconds", "120");
 
-        if (Config.get("ENVIRONMENT", "development").equals("development")) {
+        if (!Config.IS_PRODUCTION) {
             data.put("emailOtp", emailOtp);
         }
 
@@ -518,7 +523,7 @@ public class AuthService {
     public AuthResponse updatePassword(String credId, String newPassword) {
         Map<String, String> data = new HashMap<>();
 
-        if (!PasswordUtil.checkPwdString(newPassword)) {
+        if (Config.IS_PRODUCTION && !PasswordUtil.checkPwdString(newPassword)) {
             data.put("error", "password not in desired format");
             return new AuthResponse(400, data);
         }
@@ -582,7 +587,7 @@ public class AuthService {
         }
 
         //recheck session for phantom cache entry
-        var updatedSession =  transactionManager.executeInTransaction(conn -> {
+        var updatedSession = transactionManager.executeInTransaction(conn -> {
             Optional<AuthSession> dbSession = authDao.sessionDao.findBySessionToken(conn, refreshToken);
 
             //phantom cache entry check
@@ -602,7 +607,7 @@ public class AuthService {
             return finalDbSession;
         });
 
-        if(updatedSession == null) {
+        if (updatedSession == null) {
             redis.deleteRefreshToken(refreshToken);
             data.put("error", "invalid_refresh");
             return new AuthResponse(401, data);

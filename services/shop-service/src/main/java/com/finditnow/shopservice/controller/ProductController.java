@@ -1,8 +1,8 @@
 package com.finditnow.shopservice.controller;
 
+import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.dto.ProductRequest;
 import com.finditnow.shopservice.dto.ProductResponse;
-import com.finditnow.shopservice.dto.PagedResponse;
 import com.finditnow.shopservice.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -48,7 +48,7 @@ public class ProductController extends BaseController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<ProductResponse> updateProduct(
             @PathVariable Long id,
             @Valid @RequestBody ProductRequest request,
@@ -61,7 +61,7 @@ public class ProductController extends BaseController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SHOP', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable Long id,
             Authentication authentication) {

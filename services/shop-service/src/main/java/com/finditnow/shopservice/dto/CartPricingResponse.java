@@ -6,7 +6,8 @@ import lombok.Data;
 @Data
 @AllArgsConstructor
 public class CartPricingResponse {
-    private int deliveryFee;
-    private int tax;
-    private int payable;
+    private double distanceKm;
+    private double deliveryFee;
+    private double tax;
+    private double payable;
 }

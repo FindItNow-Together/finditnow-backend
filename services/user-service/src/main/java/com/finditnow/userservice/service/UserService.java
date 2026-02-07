@@ -1,9 +1,7 @@
 package com.finditnow.userservice.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.finditnow.interservice.InterServiceClient;
 import com.finditnow.userservice.dao.UserDao;
-import com.finditnow.userservice.dto.CreateDeliveryAgentRequest;
 import com.finditnow.userservice.dto.PagedResponse;
 import com.finditnow.userservice.dto.UserDto;
 import com.finditnow.userservice.entity.User;
