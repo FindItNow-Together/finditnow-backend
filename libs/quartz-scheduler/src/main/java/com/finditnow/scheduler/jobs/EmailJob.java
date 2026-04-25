@@ -10,9 +10,7 @@ public class EmailJob implements Job {
     public void execute(JobExecutionContext ctx) {
         JobDataMap data = ctx.getMergedJobDataMap();
 
-        MailService mailService = (MailService) data.get("service");
-
-        mailService.sendMail(
+        MailService.getInstance().sendMail(
                 data.getString("email"),
                 data.getString("subject"),
                 data.getString("body")

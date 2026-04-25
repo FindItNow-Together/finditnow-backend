@@ -47,4 +47,9 @@ public class ShopRequest {
      * Category type should be SHOP or BOTH.
      */
     private Long categoryId;
+
+    /**
+     * Optional: Image URL for the shop logo/banner.
+     */
+    private String imageUrl;
 }

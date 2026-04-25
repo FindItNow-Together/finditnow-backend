@@ -2,9 +2,9 @@ package com.finditnow.shopservice.config;
 
 import com.finditnow.shopservice.security.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,9 +22,6 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthenticationFilter;
 
-    @Value("${cors.allowed-origins:http://localhost:3000}")
-    private String[] allowedOrigins;
-
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -32,48 +29,44 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints - search and categories
-                        .requestMatchers(
-                                "/search/**",
-                                "/categories/**",
-                                "/api/search/**",
-                                "/api/categories/**",
-                                "/api/shops/search"
-                        ).permitAll()
+        http.csrf(csrf -> csrf.disable())
+                // Disable HTTP Basic authentication (removes default password requirement)
+                .httpBasic(httpBasic -> httpBasic.disable())
+                // Disable form login (removes default login page)
+                .formLogin(formLogin -> formLogin.disable()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)).authorizeHttpRequests(auth -> auth
+                        // ============ PUBLIC ENDPOINTS ============
+                        // Search and categories - fully public
+                        .requestMatchers("/search/**", "/categories/**").permitAll()
 
-                        // Allow public READ access to shops, products, and inventory
-                        .requestMatchers("GET", "/shop/**", "/api/shop/**").permitAll()
-                        .requestMatchers("GET", "/product/**", "/api/product/**").permitAll()
+                        // Shop search endpoint - public
+                        .requestMatchers("/shops/search").permitAll()
 
-                        // Require authentication for CREATE/UPDATE/DELETE operations
-                        .requestMatchers("POST", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
-                        .requestMatchers("PUT", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
-                        .requestMatchers("DELETE", "/shop/**", "/api/shop/**").hasAnyRole("SHOP", "ADMIN")
-                        .requestMatchers("POST", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
-                        .requestMatchers("PUT", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
-                        .requestMatchers("DELETE", "/product/**", "/api/product/**").hasAnyRole("SHOP", "ADMIN")
+                        // ============ SHOP ENDPOINTS ============
+                        // Public READ access to shops
+                        .requestMatchers(HttpMethod.GET, "/shop/**").permitAll()
 
+                        // Require authentication for CREATE/UPDATE/DELETE on shops
+                        .requestMatchers(HttpMethod.POST, "/shop/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.PUT, "/shop/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.DELETE, "/shop/**").hasAnyRole("SHOP", "ADMIN")
+
+                        // ============ PRODUCT ENDPOINTS ============
+                        // Public READ access to products
+                        .requestMatchers(HttpMethod.GET, "/product/**").permitAll()
+
+                        // Require authentication for CREATE/UPDATE/DELETE on products
+                        .requestMatchers(HttpMethod.POST, "/product/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.PUT, "/product/**").hasAnyRole("SHOP", "ADMIN").requestMatchers(HttpMethod.DELETE, "/product/**").hasAnyRole("SHOP", "ADMIN")
+
+                        // ============ CART ENDPOINTS ============
+                        // Cart requires authentication for ALL operations
+                        // (removed .permitAll() for cart - uses @PreAuthorize in controller)
+
+                        // ============ INTERNAL SERVICE ENDPOINTS ============
+                        // Internal endpoints require SERVICE role
+                        .requestMatchers("/cart/*/internal/**").hasRole("SERVICE")
+
+                        // ============ DEFAULT ============
                         // All other requests require authentication
-                        .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        .anyRequest().authenticated()).addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-//    @Bean
-//    public CorsConfigurationSource corsConfigurationSource() {
-//        CorsConfiguration configuration = new CorsConfiguration();
-//        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-//        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-//        configuration.setAllowedHeaders(Arrays.asList("*"));
-//        configuration.setAllowCredentials(true);
-//
-//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-//        source.registerCorsConfiguration("/**", configuration);
-//        return source;
-//    }
 }

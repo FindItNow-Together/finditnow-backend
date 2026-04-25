@@ -38,6 +38,34 @@ public class AuthSessionDao {
         }
     }
 
+    public List<AuthSession> findInvalidSessions() throws SQLException {
+        try (Connection conn = dataSource.getConnection()) {
+            String sql = "SELECT * FROM auth_sessions WHERE is_valid = true AND (expires_at < NOW() OR revoked_at < NOW())";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ResultSet rs = ps.executeQuery();
+                List<AuthSession> sessions = new ArrayList<>();
+                while (rs.next()) {
+                    sessions.add(mapRow(rs));
+                }
+
+                return sessions;
+            }
+        }
+    }
+
+    /**
+     * Revokes all expired sessions
+     * @return number of sessions revoked
+     */
+    public int revokeExpiredSessions(Connection conn) throws SQLException {
+        String sql = "UPDATE auth_sessions SET is_valid = false, revoked_at = NOW() " +
+                "WHERE is_valid = true AND expires_at < NOW()";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            return stmt.executeUpdate();
+        }
+    }
+
     // Transactional methods
     public Optional<AuthSession> findById(Connection conn, UUID id) throws SQLException {
         return queryOne(conn, "SELECT * FROM auth_sessions WHERE id = ?", id);

@@ -11,8 +11,10 @@ import com.finditnow.orderservice.entities.OrderItem;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +28,8 @@ public class OrderService {
     private final OrderDao orderDao;
     private final PaymentDao paymentDao;
     private final DeliveryClient deliveryClient;
+    private final long SHOP_CACHE_SECONDS = Duration.ofDays(15).toSeconds();
+    private final long USER_ADDRESS_CACHE_SECONDS = Duration.ofDays(15).toSeconds();
 
     // This should be configured via application.properties
     private static final String CART_SERVICE_URL = "http://localhost:8081";
@@ -52,12 +56,7 @@ public class OrderService {
         // 3.1 Calculate Delivery Charge
         double deliveryCharge = 0.0;
         if (!"TAKEAWAY".equalsIgnoreCase(request.getDeliveryType())) {
-            // TODO: Get actual lat/long from Shop and User Address
-            DeliveryQuoteResponse quote = deliveryClient.calculateQuote(
-                    DeliveryQuoteRequest.builder()
-                            .shopLatitude(0.0).shopLongitude(0.0)
-                            .userLatitude(0.0).userLongitude(0.0)
-                            .build());
+            DeliveryQuoteResponse quote = getDeliveryQuote(cart.getShopId(), request.getAddressId());
             deliveryCharge = quote.getAmount();
         }
         totalAmount += deliveryCharge;
@@ -127,6 +126,21 @@ public class OrderService {
                 .collect(Collectors.toList());
     }
 
+    public Page<OrderResponse> getShopOrders(Long shopId, int page, int size) {
+        // In a real scenario, you'd verify if the authenticated user owns this shop
+        return orderDao.findByShopId(shopId, page, size)
+                .map(this::mapToOrderResponse);
+    }
+
+    public Double getShopEarnings(Long shopId) {
+        Double earnings = orderDao.calculateTotalEarnings(shopId);
+        return earnings != null ? earnings : 0.0;
+    }
+
+    public List<String> getRecentShopProducts(Long shopId) {
+        return orderDao.findRecentProducts(shopId);
+    }
+
     @Transactional
     public void confirmOrderPayment(UUID orderId) {
         Order order = orderDao.findById(orderId)
@@ -143,13 +157,28 @@ public class OrderService {
     }
 
     public DeliveryQuoteResponse getDeliveryQuote(Long shopId, UUID addressId) {
-        // TODO: Fetch Shop and User Address to get real Lat/Long
-        // For now, mocking coordinates
-        return deliveryClient.calculateQuote(
-                DeliveryQuoteRequest.builder()
-                        .shopLatitude(0.0).shopLongitude(0.0)
-                        .userLatitude(0.0).userLongitude(0.0)
-                        .build());
+        try {
+            var shopRes = InterServiceClient.call("shop-service", "/shop/" + shopId.toString(), "GET", "{}", true, SHOP_CACHE_SECONDS);
+
+            log.info("Shop response received: {}", shopRes.body());
+
+            ShopResponse shopResponse = JsonUtil.fromJson(shopRes.body(), ShopResponse.class);
+
+            var userRes = InterServiceClient.call("user-service", "/addresses/" + addressId.toString(), "GET", "{}", true, USER_ADDRESS_CACHE_SECONDS);
+
+            log.info("User address received: {}", userRes.body());
+
+            UserAddressApiResponse.UserAddress userAddress = JsonUtil.fromJson(userRes.body(), UserAddressApiResponse.class).getData();
+
+            return deliveryClient.calculateQuote(
+                    DeliveryQuoteRequest.builder()
+                            .shopLatitude(shopResponse.getLatitude()).shopLongitude(shopResponse.getLongitude())
+                            .userLatitude(userAddress.getLatitude()).userLongitude(userAddress.getLongitude())
+                            .build());
+        } catch (Exception e) {
+            log.error("failed to get delivery quote:  {} , returning sample quote", e.getMessage(), e);
+            return new DeliveryQuoteResponse(0.0, 0.0);
+        }
     }
 
     private CartDTO fetchCart(UUID cartId, UUID userId) {
@@ -177,6 +206,58 @@ public class OrderService {
         }
     }
 
+    /**
+     * Customer cancels their own order. Allowed only when status is CREATED, CONFIRMED, or PAID.
+     * Propagates cancellation to Delivery service. If payment was PAID, sets payment status to REFUND_PENDING.
+     */
+    @Transactional
+    public OrderResponse cancelOrderByCustomer(UUID orderId, UUID userId, String reason) {
+        Order order = orderDao.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new RuntimeException("Unauthorized: order does not belong to you");
+        }
+
+        Order.OrderStatus status = order.getStatus();
+        if (status == Order.OrderStatus.CANCELLED) {
+            throw new RuntimeException("Order is already cancelled");
+        }
+        if (status == Order.OrderStatus.OUT_FOR_DELIVERY
+                || status == Order.OrderStatus.DELIVERED
+                || status == Order.OrderStatus.PACKED
+                || status == Order.OrderStatus.PICKED_UP
+                || status == Order.OrderStatus.IN_TRANSIT
+                || status == Order.OrderStatus.FAILED) {
+            throw new RuntimeException("Order cannot be cancelled in current state");
+        }
+
+        if (reason == null || reason.trim().length() < 5) {
+            throw new RuntimeException("Cancellation reason must be at least 5 characters");
+        }
+
+        order.setStatus(Order.OrderStatus.CANCELLED);
+        order.setCancelledBy(Order.CancelledBy.CUSTOMER);
+        order.setCancellationReason(reason.trim());
+        order.setCancelledAt(LocalDateTime.now());
+
+        if (order.getPaymentStatus() == Order.PaymentStatus.PAID) {
+            order.setPaymentStatus(Order.PaymentStatus.REFUND_PENDING);
+            // TODO: Integrate with payment gateway to trigger refund when ready
+        }
+
+        Order savedOrder = orderDao.save(order);
+
+        try {
+            InterServiceClient.call("delivery-service", "/deliveries/order/" + orderId + "/cancel", "PUT", "{}");
+            log.info("Delivery cancelled for order {}", orderId);
+        } catch (Exception e) {
+            log.error("Failed to cancel delivery for order {}; order cancellation not rolled back", orderId, e);
+        }
+
+        return mapToOrderResponse(savedOrder);
+    }
+
     private OrderResponse mapToOrderResponse(Order order) {
         OrderResponse response = new OrderResponse();
         response.setId(order.getId());
@@ -187,7 +268,13 @@ public class OrderService {
         response.setPaymentStatus(order.getPaymentStatus().name().toLowerCase());
         response.setTotalAmount(order.getTotalAmount());
         response.setDeliveryAddressId(order.getDeliveryAddressId());
-        response.setCreatedAt(order.getCreatedAt().toString());
+        response.setCreatedAt(order.getCreatedAt() != null ? order.getCreatedAt().toString() : null);
+
+        if (order.getCancelledBy() != null) {
+            response.setCancelledBy(order.getCancelledBy().name().toLowerCase());
+            response.setCancellationReason(order.getCancellationReason());
+            response.setCancelledAt(order.getCancelledAt() != null ? order.getCancelledAt().toString() : null);
+        }
 
         List<OrderItemResponse> items = order.getOrderItems().stream()
                 .map(item -> {
@@ -206,21 +293,31 @@ public class OrderService {
     }
 
     private void initiateDelivery(Order order) {
-        // TODO: Fetch Shop Address and Customer Address properly
-        String placeholderAddress = "To be fetched address";
-
-        InitiateDeliveryRequest request = InitiateDeliveryRequest.builder()
+        InitiateDeliveryRequest.InitiateDeliveryRequestBuilder request = InitiateDeliveryRequest.builder()
                 .orderId(order.getId())
                 .shopId(order.getShopId())
                 .customerId(order.getUserId())
                 .type(order.getDeliveryType())
                 .amount(order.getDeliveryCharge())
-                .pickupAddress(placeholderAddress) // We need to fetch shop address
-                .deliveryAddress(order.getDeliveryAddressId().toString()) // Ideally fetch address text
-                .instructions(order.getInstructions())
-                .build();
+                .instructions(order.getInstructions());
+        ShopResponse shopResponse = null;
+        UserAddressApiResponse.UserAddress userAddress = null;
+        try {
+            var shopRes = InterServiceClient.call("shop-service", "/shop/" + order.getShopId().toString(), "GET", null, true);
 
-        deliveryClient.initiateDelivery(request);
+            shopResponse = JsonUtil.fromJson(shopRes.body(), ShopResponse.class);
+
+            var userRes = InterServiceClient.call("user-service", "/addresses/" + order.getDeliveryAddressId().toString(), "GET", null, true);
+
+            userAddress = JsonUtil.fromJson(userRes.body(), UserAddressApiResponse.class).getData();
+            request.pickupAddress(shopResponse.getAddress())
+                    .deliveryAddress(userAddress.getFullAddress());
+        } catch (Exception e) {
+            log.error("failed rest call to shop service, or user service during intiate delivery {}", e.getMessage());
+            request.pickupAddress("Sample pickup address").deliveryAddress("sample delivery address");
+        }
+
+        deliveryClient.initiateDelivery(request.build());
     }
 
     @Transactional

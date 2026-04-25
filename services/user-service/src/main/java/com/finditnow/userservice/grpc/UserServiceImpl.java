@@ -58,17 +58,18 @@ public class UserServiceImpl extends UserServiceGrpc.UserServiceImplBase {
         User user = userDao.findById(UUID.fromString(request.getId())).orElse(null);
 
         if (user == null) {
-            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Update failed").setError("No such user").build());
+            responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                    .setMessage("Update failed").setError("No such user").build());
             responseObserver.onCompleted();
             return;
         }
-
 
         user.setRole(request.getRole());
 
         userDao.save(user);
 
-        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId()).setMessage("Role updated successfully to: " + request.getRole()).build());
+        responseObserver.onNext(UserRoleUpdateResponse.newBuilder().setId(request.getId())
+                .setMessage("Role updated successfully to: " + request.getRole()).build());
         responseObserver.onCompleted();
     }
 }

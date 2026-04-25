@@ -9,12 +9,24 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 
 public class MailService {
+    private static MailService mailServiceInstance;
+
     private final Session session;
     private final String from;
 
-    public MailService() {
+    public static MailService getInstance() {
+        if (mailServiceInstance == null) {
+            mailServiceInstance = new MailService();
+        }
+
+        return mailServiceInstance;
+    }
+
+    private MailService() {
         String userName = Config.get("EMAIL_APP_USERNAME", "example@example.com");
         String userPwd = Config.get("EMAIL_APP_PWD", "very_secure_app_password");
+
+        System.out.println("mail server config params " + userName + " " + userPwd);
 
         this.session = MailConfig.createSession(userName, userPwd);
         this.from = userName;
@@ -29,9 +41,9 @@ public class MailService {
 
             message.setContent(body, "text/html; charset=utf-8");
 
-            if(!"development".equals(Config.get("ENVIRONMENT", "development"))){
+            if (Config.IS_PRODUCTION) {
                 Transport.send(message);
-            };
+            }
 
             System.out.println("Mail sent successfully to " + to);
 

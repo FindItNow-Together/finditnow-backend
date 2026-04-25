@@ -12,6 +12,7 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-core:2.20.1")
 
     api(project(":libs:config"))
+    api(project(":libs:redis"))
 }
 
 java {

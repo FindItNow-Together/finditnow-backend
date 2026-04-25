@@ -20,4 +20,5 @@ public class ShopResponse {
     private String openHours;
     private String deliveryOption;
     private CategoryResponse category;
+    private String imageUrl;
 }

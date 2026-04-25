@@ -9,7 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @RestController
 @RequestMapping("/deliveries")
@@ -17,6 +20,9 @@ import java.util.UUID;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+
+    // Web socket ticket store, (using in memory map for now)
+    private final Map<String, String> ticketStore = new ConcurrentHashMap<>();
 
     @PostMapping("/calculate-quote")
     public ResponseEntity<DeliveryQuoteResponse> calculateQuote(
@@ -36,6 +42,17 @@ public class DeliveryController {
         return ResponseEntity.ok(deliveryService.getDeliveryByOrderId(orderId));
     }
 
+    /**
+     * Cancel delivery by order ID (internal: called by order-service when customer cancels order).
+     * Requires SERVICE role (service token).
+     */
+    @PutMapping("/order/{orderId}/cancel")
+    @PreAuthorize("hasRole('SERVICE')")
+    public ResponseEntity<?> cancelDeliveryByOrderId(@PathVariable UUID orderId) {
+        DeliveryResponse response = deliveryService.cancelByOrderId(orderId);
+        return response != null ? ResponseEntity.ok(response) : ResponseEntity.ok().build();
+    }
+
     @PutMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('DELIVERY_AGENT', 'ADMIN')")
     public ResponseEntity<DeliveryResponse> updateStatus(
@@ -46,7 +63,7 @@ public class DeliveryController {
 
     /**
      * Get deliveries assigned to a specific agent with pagination and filtering
-     * 
+     *
      * @param userIdStr agent id
      * @param status    optional status filter
      * @param page      page number (0-indexed)
@@ -101,5 +118,19 @@ public class DeliveryController {
             @RequestAttribute("userId") String userIdStr) {
         UUID agentId = UUID.fromString(userIdStr);
         return ResponseEntity.ok(deliveryService.optOutDelivery(id, agentId));
+    }
+
+    @PostMapping("/ws-ticket")
+    public ResponseEntity<Map<String, String>> createTicket(Principal principal) {
+        String ticket = UUID.randomUUID().toString();
+
+        ticketStore.put(ticket, principal.getName());
+
+        return ResponseEntity.ok(Map.of("ticket", ticket));
+    }
+
+    // Helper for the Interceptor
+    public String getUsernameFromTicket(String ticket) {
+        return ticketStore.remove(ticket); // Remove ensures one-time use
     }
 }

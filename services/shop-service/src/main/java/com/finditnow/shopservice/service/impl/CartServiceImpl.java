@@ -1,13 +1,9 @@
 package com.finditnow.shopservice.service.impl;
 
-import com.finditnow.shopservice.dto.AddToCartRequest;
-import com.finditnow.shopservice.dto.CartPricingResponse;
-import com.finditnow.shopservice.dto.CartResponse;
-import com.finditnow.shopservice.dto.UpdateCartItemRequest;
-import com.finditnow.shopservice.entity.Cart;
-import com.finditnow.shopservice.entity.CartItem;
-import com.finditnow.shopservice.entity.CartStatus;
-import com.finditnow.shopservice.entity.ShopInventory;
+import com.finditnow.interservice.InterServiceClient;
+import com.finditnow.interservice.JsonUtil;
+import com.finditnow.shopservice.dto.*;
+import com.finditnow.shopservice.entity.*;
 import com.finditnow.shopservice.exception.BadRequestException;
 import com.finditnow.shopservice.exception.CartItemNotFoundException;
 import com.finditnow.shopservice.exception.CartNotFoundException;
@@ -16,13 +12,18 @@ import com.finditnow.shopservice.mapper.CartMapper;
 import com.finditnow.shopservice.repository.CartItemRepository;
 import com.finditnow.shopservice.repository.CartRepository;
 import com.finditnow.shopservice.repository.ShopInventoryRepository;
+import com.finditnow.shopservice.repository.ShopRepository;
 import com.finditnow.shopservice.service.CartService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -31,6 +32,7 @@ public class CartServiceImpl implements CartService {
     private final CartRepository cartRepository;
     private final CartItemRepository cartItemRepository;
     private final ShopInventoryRepository shopInventoryRepository;
+    private final ShopRepository shopRepository;
     private final CartMapper cartMapper;
 
     @Override
@@ -282,14 +284,14 @@ public class CartServiceImpl implements CartService {
         Cart cart = getCartByIdAndUser(cartId, userId);
 
         int itemsTotal = cart.getItems().stream()
-                .mapToInt(i -> (int)i.getShopInventory().getPrice() * i.getQuantity())
+                .mapToInt(i -> (int) i.getShopInventory().getPrice() * i.getQuantity())
                 .sum();
 
-        int tax = calculateTax(itemsTotal);
-        int deliveryFee = calculateDeliveryFee(cart);
-        int payable = itemsTotal + tax + deliveryFee;
+        double tax = calculateTax(itemsTotal);
+        DeliveryQuoteApiResponse deliveryQuote = calculateDeliveryFee(cart);
+        double payable = itemsTotal + tax + deliveryQuote.getAmount();
 
-        return new CartPricingResponse(deliveryFee, tax, payable);
+        return new CartPricingResponse(deliveryQuote.getDistanceKm(), deliveryQuote.getAmount(), tax, payable);
     }
 
     @Override
@@ -321,7 +323,30 @@ public class CartServiceImpl implements CartService {
         return (int) (amount * 0.05); //produce based on dynamic env attributes
     }
 
-    private int calculateDeliveryFee(Cart cart) {
-        return 100; //fetch from delivery service
+    private DeliveryQuoteApiResponse calculateDeliveryFee(Cart cart) {
+        try {
+            Shop shop = shopRepository.findById(cart.getShopId()).orElseThrow(() -> new NoSuchElementException("Shop " + cart.getShopId() + " for the cart " +
+                    cart.getId() + " does not exist or is deleted"));
+
+            var userAddrRes = InterServiceClient.call("user-service", "/addresses/user/" +
+                    cart.getUserId() + "/primary", "GET", null, true);
+
+            UserAddressApiResponse.UserAddressDto userLocation = JsonUtil.fromJson(userAddrRes.body(),
+                    UserAddressApiResponse.class).getData();
+
+            Map<String, Double> deliveryQuoteReq = Map.of(
+                    "shopLatitude", shop.getLatitude(),
+                    "shopLongitude", shop.getLongitude(),
+                    "userLatitude", userLocation.getLatitude(),
+                    "userLongitude", userLocation.getLongitude()
+            );
+
+            var deliveryQuoteRes = InterServiceClient.call("delivery-service", "/deliveries/calculate-quote", "POST", JsonUtil.toJson(deliveryQuoteReq));
+
+            return JsonUtil.fromJson(deliveryQuoteRes.body(), DeliveryQuoteApiResponse.class);
+        } catch (Exception e) {
+            log.error("failed to calculate delivery quote for cartId {}: reason: {}, returning sample quote", cart.getId(), e.getMessage(), e);
+            return new DeliveryQuoteApiResponse();
+        }
     }
 }

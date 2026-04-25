@@ -113,6 +113,36 @@ public class DeliveryService {
     }
 
     /**
+     * Cancel delivery by order ID (called by order-service when customer cancels order).
+     * If delivery exists and is not already completed, marks it CANCELLED and unassigns agent.
+     */
+    @Transactional
+    public DeliveryResponse cancelByOrderId(UUID orderId) {
+        Delivery delivery = deliveryRepository.findByOrderId(orderId).orElse(null);
+        if (delivery == null) {
+            log.info("No delivery found for order {}, nothing to cancel", orderId);
+            return null;
+        }
+
+        DeliveryStatus current = delivery.getStatus();
+        if (current == DeliveryStatus.DELIVERED
+                || current == DeliveryStatus.CANCELLED
+                || current == DeliveryStatus.CANCELLED_BY_AGENT
+                || current == DeliveryStatus.FAILED) {
+            log.info("Delivery {} for order {} already in terminal state {}", delivery.getId(), orderId, current);
+            return mapToResponse(delivery);
+        }
+
+        delivery.setStatus(DeliveryStatus.CANCELLED);
+        Delivery updatedDelivery = deliveryRepository.save(delivery);
+
+        freeUpAgent(delivery);
+        log.info("Delivery {} cancelled for order {} (customer cancellation)", delivery.getId(), orderId);
+
+        return mapToResponse(updatedDelivery);
+    }
+
+    /**
      * Fetches delivery by delivery ID.
      */
     public DeliveryResponse getDeliveryById(UUID deliveryId) {

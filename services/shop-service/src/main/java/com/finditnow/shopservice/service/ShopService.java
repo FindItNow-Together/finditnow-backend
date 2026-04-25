@@ -46,6 +46,10 @@ public class ShopService {
             shop.setCategory(category);
         }
 
+        if (request.getImageUrl() != null) {
+            shop.setImageUrl(request.getImageUrl());
+        }
+
         Shop savedShop = shopRepository.save(shop);
         return mapToResponse(savedShop);
     }
@@ -82,8 +86,7 @@ public class ShopService {
                 shopPage.getTotalElements(),
                 shopPage.getTotalPages(),
                 shopPage.isFirst(),
-                shopPage.isLast()
-        );
+                shopPage.isLast());
     }
 
     @Transactional(readOnly = true)
@@ -131,8 +134,7 @@ public class ShopService {
                 shopPage.getTotalElements(),
                 shopPage.getTotalPages(),
                 shopPage.isFirst(),
-                shopPage.isLast()
-        );
+                shopPage.isLast());
     }
 
     /**
@@ -183,6 +185,9 @@ public class ShopService {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.getCategoryId()));
             shop.setCategory(category);
+        }
+        if (request.getImageUrl() != null) {
+            shop.setImageUrl(request.getImageUrl());
         }
 
         Shop updatedShop = shopRepository.save(shop);
@@ -286,7 +291,8 @@ public class ShopService {
 
     /**
      * Filtered shop search with pagination (used by /api/v1/shops/search).
-     * Location params are accepted for future distance-based sorting, but not used yet.
+     * Location params are accepted for future distance-based sorting, but not used
+     * yet.
      */
     @Transactional(readOnly = true)
     public PagedResponse<ShopResponse> searchShops(
@@ -314,8 +320,7 @@ public class ShopService {
                 shopPage.getTotalElements(),
                 shopPage.getTotalPages(),
                 shopPage.isFirst(),
-                shopPage.isLast()
-        );
+                shopPage.isLast());
     }
 
     /**
@@ -346,6 +351,7 @@ public class ShopService {
                 shop.getLongitude(), // Longitude coordinate
                 shop.getOpenHours(), // Open hours text
                 shop.getDeliveryOption(), // Delivery option selected
-                categoryResponse);
+                categoryResponse,
+                shop.getImageUrl()); // Shop image URL
     }
 }

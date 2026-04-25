@@ -4,8 +4,6 @@ import com.finditnow.deliveryservice.entity.DeliveryAgentStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
-import java.util.UUID;
-
 @Data
 public class UpdateAgentStatusRequest {
     @NotNull
