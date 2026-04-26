@@ -11,7 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class DeliveryServiceApplication {
     public static void main(String[] args) {
-        Database.setEnv("delivery_db");
+        Database.setEnv("delivery_service");
 
         InterServiceClient.init("delivery-service", Config.get("DELIVERY_SERVICE_SECRET","verylongunimaginablesecret"));
 

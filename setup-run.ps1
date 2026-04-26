@@ -106,7 +106,7 @@ $ServiceDatabases = @(
     "user_service",
     "shop_service",
     "order_service",
-    "delivery_db"
+    "delivery_service"
 )
 
 foreach ($db in $ServiceDatabases)

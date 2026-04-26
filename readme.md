@@ -21,3 +21,8 @@ windows(cmd): gradlew.bat createService -PserviceName=<service-name>
 linux terminal: gradlew createService -PserviceName=<service-name>
 This creates a new service inside the services folder with bare minimum folder structure and gradle build, may need borrowing of
 gradle build information from existing service gradle build files.
+
+Development:
+1.For local development and testing, use localhost for db, redis and grpc hosts inside the respective .envs
+2.For production integration use respective service names(keys as per docker-compose.prod.yml) in the db, redis, grpc hosts
+ie for db-> postgres, redis-> redis, grpc-> user(as only user service is currently having grpc exposed)

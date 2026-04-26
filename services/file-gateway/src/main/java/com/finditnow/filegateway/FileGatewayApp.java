@@ -48,7 +48,7 @@ public class FileGatewayApp {
                 new EagerFormParsingHandler(formParserFactory).setNext(routes);
 
         Undertow server = Undertow.builder()
-                .addHttpListener(Integer.parseInt(Config.get("FILE_GATEWAY_SERVICE_PORT", "8090")), "localhost")
+                .addHttpListener(Integer.parseInt(Config.get("FILE_GATEWAY_SERVICE_PORT", "8090")), Config.get("FILE_GATEWAY_BIND_HOST", "0.0.0.0"))
                 .setHandler(formHandler)
                 .build();
 

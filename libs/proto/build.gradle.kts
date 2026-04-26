@@ -27,7 +27,7 @@ dependencies {
     implementation("javax.annotation:javax.annotation-api:1.3.2")
 
     // optional for testing
-    implementation("io.grpc:grpc-netty-shaded:1.76.0")
+    api("io.grpc:grpc-netty-shaded:1.63.0")
 }
 
 protobuf {

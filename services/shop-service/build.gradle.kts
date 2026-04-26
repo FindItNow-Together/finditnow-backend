@@ -1,9 +1,13 @@
 plugins {
     java
+    application
     id("org.springframework.boot") version "3.5.7"
     id("io.spring.dependency-management") version "1.1.7"
 }
 
+application {
+    mainClass = "com.finditnow.shopservice.ShopApplication"
+}
 
 group = "com.inventory"
 version = "0.0.1-SNAPSHOT"
