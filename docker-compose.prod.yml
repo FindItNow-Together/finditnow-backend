@@ -99,15 +99,11 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-file:latest
     container_name: finditnow-file-prod
     restart: unless-stopped
-    env_file:
-      - .env
+    env_file: .env
     volumes:
       - ./infra/data/file-uploads:/app/data/uploads
     expose:
       - "8090"
-#    depends_on:
-#      redis:
-#        condition: service_healthy
 
   nginx:
     image: nginx:alpine
