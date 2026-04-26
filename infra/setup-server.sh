@@ -27,9 +27,19 @@ sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw --force enable
 
+echo "Installing Certbot (for SSL/HTTPS)..."
+sudo snap install core; sudo snap refresh core
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot || true
+
 echo "Creating application directory..."
 mkdir -p ~/finditnow-backend
 cd ~/finditnow-backend
 
-echo "Setup complete! Please ensure you have configured your .env file in ~/finditnow-backend/.env"
-echo "You also need to provide GitHub secrets (SERVER_HOST, SERVER_USER, SERVER_SSH_KEY) for CI/CD to work."
+echo "Setup complete!"
+echo "--------------------------------------------------------"
+echo "1. Configure your .env file in ~/finditnow-backend/.env"
+echo "2. Set up GitHub secrets for CI/CD."
+echo "3. To get your SSL certificate after DNS is ready, run:"
+echo "   sudo certbot certonly --standalone -d your-domain.duckdns.org"
+echo "--------------------------------------------------------"
