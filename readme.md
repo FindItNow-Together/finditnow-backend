@@ -23,6 +23,39 @@ This creates a new service inside the services folder with bare minimum folder s
 gradle build information from existing service gradle build files.
 
 Development:
-1.For local development and testing, use localhost for db, redis and grpc hosts inside the respective .envs
-2.For production integration use respective service names(keys as per docker-compose.prod.yml) in the db, redis, grpc hosts
-ie for db-> postgres, redis-> redis, grpc-> user(as only user service is currently having grpc exposed)
+1. For local development and testing, use localhost for db, redis and grpc hosts inside the respective .envs.
+2. For production integration use respective service names (keys as per docker-compose.prod.yml) in the db, redis, and grpc hosts.
+
+---
+
+## 🚀 Deployment & Production
+
+The production environment is hosted on an Oracle Cloud VPS using Docker Compose and managed via GitHub Actions.
+
+### 🛰️ CI/CD Pipeline
+- **Automation**: Managed via `.github/workflows/deploy.yml`.
+- **Trigger**: Manual trigger (`workflow_dispatch`). Navigate to **GitHub Actions** -> **Build and Deploy** -> **Run workflow**.
+- **Images**: Automatically built and pushed to **GitHub Container Registry (GHCR)**.
+
+### 🏗️ Production Setup
+1. **Server Provisioning**: Use `infra/setup-server.sh` to install Docker, Nginx, and Certbot on a fresh Ubuntu VPS.
+2. **Environment**: Maintain a single `.env` file in the root directory on the server.
+3. **Database**: PostgreSQL is initialized automatically using scripts in `infra/postgres/init/`.
+4. **Networking**: Nginx acts as a Reverse Proxy (Port 80/443) routing to internal microservices.
+
+### 🔐 SSL & Domain
+- **Domain**: Point your domain (e.g., via DuckDNS) to the VPS IP.
+- **Certificate**: Use Certbot on the host:
+  ```bash
+  sudo certbot certonly --standalone -d your-domain.com
+  ```
+- **Nginx**: Certificates are mounted into the Nginx container from the host `/etc/letsencrypt` folder.
+
+### 🩺 Maintenance
+- **View Logs**: `docker compose -f docker-compose.prod.yml logs -f`
+- **Check Status**: `docker compose -f docker-compose.prod.yml ps`
+- **Update Single Service**:
+  ```bash
+  docker compose -f docker-compose.prod.yml pull <service_name>
+  docker compose -f docker-compose.prod.yml up -d <service_name>
+  ```
