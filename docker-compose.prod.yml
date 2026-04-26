@@ -33,9 +33,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-auth:latest
     container_name: finditnow-auth-prod
     restart: unless-stopped
-    env_file:
-      - .env
-      - ./services/auth/.env
+    env_file: .env
     expose:
       - "8080"
     depends_on:
@@ -48,9 +46,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-user:latest
     container_name: finditnow-user-prod
     restart: unless-stopped
-    env_file:
-      - .env
-      - ./services/user-service/.env
+    env_file: .env
     expose:
       - "8081"
       - "8082"
@@ -64,9 +60,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-shop:latest
     container_name: finditnow-shop-prod
     restart: unless-stopped
-    env_file:
-      - .env
-      - ./services/shop-service/.env
+    env_file: .env
     expose:
       - "8083"
     depends_on:
@@ -79,9 +73,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-order:latest
     container_name: finditnow-order-prod
     restart: unless-stopped
-    env_file:
-      - .env
-      - ./services/order-service/.env
+    env_file: .env
     expose:
       - "8084"
     depends_on:
@@ -94,9 +86,7 @@ services:
     image: ghcr.io/${IMAGE_OWNER}/finditnow-backend-delivery:latest
     container_name: finditnow-delivery-prod
     restart: unless-stopped
-    env_file:
-      - .env
-      - ./services/delivery-service/.env
+    env_file: .env
     expose:
       - "8086"
     depends_on:

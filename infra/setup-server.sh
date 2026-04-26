@@ -18,6 +18,9 @@ echo \
 sudo apt update
 sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
+echo "Adding user to docker group..."
+sudo usermod -aG docker $USER
+
 echo "Setting up Firewall (UFW)..."
 sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
