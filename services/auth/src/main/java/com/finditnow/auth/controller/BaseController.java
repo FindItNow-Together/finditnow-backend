@@ -54,6 +54,13 @@ public abstract class BaseController {
             cookie.setSameSiteMode("None");
             cookie.setPath("/");
             cookie.setSecure(true);
+            
+            // Set cookie domain from environment variable for cross-subdomain sharing in production
+            // This allows the refresh token cookie to be accessible from all subdomains
+            String cookieDomain = Config.get("COOKIE_DOMAIN");
+            if (cookieDomain != null && !cookieDomain.isEmpty()) {
+                cookie.setDomain(cookieDomain);
+            }
         }
 
         exchange.setResponseCookie(cookie);
