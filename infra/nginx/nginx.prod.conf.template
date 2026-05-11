@@ -24,10 +24,12 @@ upstream file_gateway_service_upstream {
 }
 
 # ---------- CORS ORIGIN MAP ----------
+# Allowed origins from environment variables
+# FRONTEND_ORIGIN and FRONTEND_DEV_ORIGIN can be set in .env
 map $http_origin $cors_origin {
     default "";
-    "http://localhost:3000" $http_origin;
-    "https://localhost:3000" $http_origin;
+    "${FRONTEND_ORIGIN}" $http_origin;
+    "${FRONTEND_DEV_ORIGIN}" $http_origin;
 }
 
 # ---------- HTTP REDIRECT ----------
