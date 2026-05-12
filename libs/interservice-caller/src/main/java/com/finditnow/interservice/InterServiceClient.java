@@ -237,6 +237,10 @@ public final class InterServiceClient {
             throw new IllegalStateException("Missing env var: " + envKey);
         }
 
+        if (!host.startsWith("http://") && !host.startsWith("https://")) {
+            host = "http://" + host;
+        }
+
         return host + ":" + port;
     }
 
