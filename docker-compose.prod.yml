@@ -113,6 +113,7 @@ services:
       - "3000"
     environment:
       - NODE_ENV=production
+      - INTERNAL_BASE_URL=http://nginx
 
   nginx:
     image: nginx:alpine
@@ -132,6 +133,7 @@ services:
       - frontend
     volumes:
       - ./infra/nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ./infra/nginx/api-proxy.conf.template:/etc/nginx/api-proxy.conf:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
     command: >
       sh -c "
