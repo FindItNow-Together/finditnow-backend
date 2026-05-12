@@ -105,6 +105,15 @@ services:
     expose:
       - "8090"
 
+  frontend:
+    image: ghcr.io/${IMAGE_OWNER}/finditnow-frontend:latest
+    container_name: finditnow-frontend-prod
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+
   nginx:
     image: nginx:alpine
     container_name: finditnow-nginx-prod
@@ -120,6 +129,7 @@ services:
       - order
       - delivery
       - file
+      - frontend
     volumes:
       - ./infra/nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
